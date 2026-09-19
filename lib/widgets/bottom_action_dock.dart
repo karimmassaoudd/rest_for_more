@@ -8,9 +8,15 @@ class BottomActionDock extends StatelessWidget {
     super.key,
     required this.period,
     required this.palette,
+    required this.onEnterFocusMode,
+    required this.onAddRoutine,
+    required this.onOpenSettings,
   });
   final RoutinePeriod period;
   final RoutinePalette palette;
+  final VoidCallback onEnterFocusMode;
+  final VoidCallback onAddRoutine;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +27,8 @@ class BottomActionDock extends StatelessWidget {
           width: double.infinity,
           height: 57,
           child: FilledButton.icon(
-            onPressed: () {},
+            key: const Key('focus-mode-button'),
+            onPressed: onEnterFocusMode,
             icon: const Icon(Icons.play_arrow_rounded, size: 20),
             label: Text(morning ? 'Enter Focus Mode' : 'Enter Sleep Flow'),
             style: FilledButton.styleFrom(
@@ -44,7 +51,8 @@ class BottomActionDock extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextButton.icon(
-              onPressed: () {},
+              key: const Key('add-routine-button'),
+              onPressed: onAddRoutine,
               icon: const Icon(Icons.add_rounded, size: 16),
               label: const Text('Add Routine'),
               style: _textButtonStyle(),
@@ -56,7 +64,8 @@ class BottomActionDock extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 3),
             ),
             TextButton.icon(
-              onPressed: () {},
+              key: const Key('routine-settings-button'),
+              onPressed: onOpenSettings,
               icon: const Icon(Icons.tune_rounded, size: 15),
               label: const Text('Routine Settings'),
               style: _textButtonStyle(),
