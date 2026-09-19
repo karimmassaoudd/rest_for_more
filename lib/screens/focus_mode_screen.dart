@@ -34,10 +34,8 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
   }
 
   int _durationInSeconds(String duration) {
-    final minutes = int.tryParse(
-          RegExp(r'\d+').firstMatch(duration)?.group(0) ?? '',
-        ) ??
-        5;
+    final minutes =
+        int.tryParse(RegExp(r'\d+').firstMatch(duration)?.group(0) ?? '') ?? 5;
     return minutes * 60;
   }
 

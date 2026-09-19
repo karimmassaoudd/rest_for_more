@@ -6,7 +6,9 @@ import '../widgets/active_routine_card.dart';
 import '../widgets/bottom_action_dock.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/routine_item_card.dart';
+import '../widgets/routine_action_sheets.dart';
 import '../widgets/routine_switcher.dart';
+import 'focus_mode_screen.dart';
 
 class RoutineScreen extends StatefulWidget {
   const RoutineScreen({super.key});
@@ -17,6 +19,7 @@ class RoutineScreen extends StatefulWidget {
 
 class _RoutineScreenState extends State<RoutineScreen> {
   RoutinePeriod _period = RoutinePeriod.morning;
+  bool _autoAdvanceToEvening = true;
 
   List<RoutineStep> _morningSteps = const [
     RoutineStep(
@@ -88,6 +91,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
   }
 
   void _toggleStep(int index) {
+    final wasCompleted = _steps[index].isCompleted;
     setState(() {
       final source = _period == RoutinePeriod.morning
           ? _morningSteps
@@ -102,6 +106,143 @@ class _RoutineScreenState extends State<RoutineScreen> {
         _eveningSteps = updated;
       }
     });
+
+    if (!wasCompleted) _scheduleEveningTransition();
+  }
+
+  void _completeStep(int index, RoutinePeriod period) {
+    if (_period != period) return;
+    final source = period == RoutinePeriod.morning
+        ? _morningSteps
+        : _eveningSteps;
+    if (source[index].isCompleted) return;
+
+    setState(() {
+      final updated = List<RoutineStep>.of(source);
+      updated[index] = updated[index].copyWith(isCompleted: true);
+      if (period == RoutinePeriod.morning) {
+        _morningSteps = updated;
+      } else {
+        _eveningSteps = updated;
+      }
+    });
+    _scheduleEveningTransition();
+  }
+
+  void _scheduleEveningTransition() {
+    if (!_autoAdvanceToEvening ||
+        _period != RoutinePeriod.morning ||
+        _morningSteps.any((step) => !step.isCompleted)) {
+      return;
+    }
+
+    Future<void>.delayed(const Duration(milliseconds: 850), () {
+      if (!mounted ||
+          !_autoAdvanceToEvening ||
+          _period != RoutinePeriod.morning ||
+          _morningSteps.any((step) => !step.isCompleted)) {
+        return;
+      }
+      setState(() => _period = RoutinePeriod.evening);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Morning complete — your Evening routine is ready.'),
+        ),
+      );
+    });
+  }
+
+  Future<void> _enterFocusMode() async {
+    final period = _period;
+    final index = _steps.indexWhere((step) => !step.isCompleted);
+    if (index == -1) {
+      if (period == RoutinePeriod.morning) {
+        setState(() => _period = RoutinePeriod.evening);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your evening routine is complete.')),
+        );
+      }
+      return;
+    }
+
+    final completed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => FocusModeScreen(
+          period: period,
+          step: _steps[index],
+          palette: RoutinePalette.forPeriod(period),
+        ),
+      ),
+    );
+    if (completed == true && mounted) _completeStep(index, period);
+  }
+
+  Future<void> _addRoutine() async {
+    final period = _period;
+    final palette = RoutinePalette.forPeriod(period);
+    final step = await showModalBottomSheet<RoutineStep>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.card,
+      barrierColor: Colors.black.withValues(alpha: 0.42),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => AddRoutineSheet(period: period, palette: palette),
+    );
+    if (step == null || !mounted) return;
+
+    setState(() {
+      if (period == RoutinePeriod.morning) {
+        _morningSteps = [..._morningSteps, step];
+      } else {
+        _eveningSteps = [..._eveningSteps, step];
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${step.title} added to ${period.name}.')),
+    );
+  }
+
+  Future<void> _openSettings() async {
+    final period = _period;
+    final palette = RoutinePalette.forPeriod(period);
+    final result = await showModalBottomSheet<RoutineSettingsResult>(
+      context: context,
+      backgroundColor: palette.card,
+      barrierColor: Colors.black.withValues(alpha: 0.42),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => RoutineSettingsSheet(
+        period: period,
+        palette: palette,
+        autoAdvanceToEvening: _autoAdvanceToEvening,
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _autoAdvanceToEvening = result.autoAdvanceToEvening;
+      if (result.resetProgress) {
+        final reset = _steps
+            .map((step) => step.copyWith(isCompleted: false))
+            .toList();
+        if (period == RoutinePeriod.morning) {
+          _morningSteps = reset;
+        } else {
+          _eveningSteps = reset;
+        }
+      }
+      if (result.switchToEvening) _period = RoutinePeriod.evening;
+    });
+
+    if (result.resetProgress) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${period.name} progress reset.')));
+    }
   }
 
   @override
@@ -165,7 +306,13 @@ class _RoutineScreenState extends State<RoutineScreen> {
                             : const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 14),
-                      BottomActionDock(period: _period, palette: palette),
+                      BottomActionDock(
+                        period: _period,
+                        palette: palette,
+                        onEnterFocusMode: _enterFocusMode,
+                        onAddRoutine: _addRoutine,
+                        onOpenSettings: _openSettings,
+                      ),
                     ],
                   ),
                 ),
