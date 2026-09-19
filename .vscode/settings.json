@@ -1,3 +1,4 @@
 {
-  "gitlens.ai.model": "vscode"
+  "gitlens.ai.model": "vscode",
+  "cmake.sourceDirectory": "${workspaceFolder}/linux"
 }
