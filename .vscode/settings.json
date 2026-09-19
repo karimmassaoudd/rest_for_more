@@ -1,4 +1,5 @@
 {
   "gitlens.ai.model": "vscode",
-  "cmake.sourceDirectory": "${workspaceFolder}/linux"
+  "cmake.sourceDirectory": "${workspaceFolder}/linux",
+  "cmake.configureOnOpen": false
 }
