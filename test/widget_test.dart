@@ -86,41 +86,11 @@ void main() {
     expect(find.text('1 step remaining'), findsOneWidget);
   });
 
-  testWidgets('add routine form appends a new morning step', (tester) async {
+  testWidgets('secondary routine actions are not shown', (tester) async {
     await tester.pumpWidget(const RestForMeApp());
 
-    final addButton = find.byKey(const Key('add-routine-button'));
-    await tester.ensureVisible(addButton);
-    await tester.tap(addButton);
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byKey(const Key('routine-title-field')),
-      'Read ten pages',
-    );
-    final saveButton = find.byKey(const Key('save-routine-button'));
-    await tester.ensureVisible(saveButton);
-    await tester.tap(saveButton);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Read ten pages'), findsOneWidget);
-    expect(find.text('3 steps remaining'), findsOneWidget);
-  });
-
-  testWidgets('routine settings can move directly to evening', (tester) async {
-    await tester.pumpWidget(const RestForMeApp());
-
-    final settingsButton = find.byKey(const Key('routine-settings-button'));
-    await tester.ensureVisible(settingsButton);
-    await tester.tap(settingsButton);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Routine settings'), findsOneWidget);
-    expect(find.text('Automatically move to Evening'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('go-to-evening-setting')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Good evening,\nElena'), findsOneWidget);
+    expect(find.text('Add Routine'), findsNothing);
+    expect(find.text('Routine Settings'), findsNothing);
+    expect(find.byKey(const Key('focus-mode-button')), findsOneWidget);
   });
 }

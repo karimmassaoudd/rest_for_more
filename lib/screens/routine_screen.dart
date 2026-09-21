@@ -6,7 +6,6 @@ import '../widgets/active_routine_card.dart';
 import '../widgets/bottom_action_dock.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/routine_item_card.dart';
-import '../widgets/routine_action_sheets.dart';
 import '../widgets/routine_switcher.dart';
 import 'focus_mode_screen.dart';
 
@@ -19,7 +18,6 @@ class RoutineScreen extends StatefulWidget {
 
 class _RoutineScreenState extends State<RoutineScreen> {
   RoutinePeriod _period = RoutinePeriod.morning;
-  bool _autoAdvanceToEvening = true;
 
   List<RoutineStep> _morningSteps = const [
     RoutineStep(
@@ -130,15 +128,13 @@ class _RoutineScreenState extends State<RoutineScreen> {
   }
 
   void _scheduleEveningTransition() {
-    if (!_autoAdvanceToEvening ||
-        _period != RoutinePeriod.morning ||
+    if (_period != RoutinePeriod.morning ||
         _morningSteps.any((step) => !step.isCompleted)) {
       return;
     }
 
     Future<void>.delayed(const Duration(milliseconds: 850), () {
       if (!mounted ||
-          !_autoAdvanceToEvening ||
           _period != RoutinePeriod.morning ||
           _morningSteps.any((step) => !step.isCompleted)) {
         return;
@@ -149,6 +145,18 @@ class _RoutineScreenState extends State<RoutineScreen> {
           content: Text('Morning complete — your Evening routine is ready.'),
         ),
       );
+    });
+  }
+
+  Future<void> _refreshRoutine() async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    setState(() {
+      _morningSteps = _morningSteps
+          .map((s) => s.copyWith(isCompleted: false))
+          .toList();
+      _eveningSteps = _eveningSteps
+          .map((s) => s.copyWith(isCompleted: false))
+          .toList();
     });
   }
 
@@ -178,73 +186,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
     if (completed == true && mounted) _completeStep(index, period);
   }
 
-  Future<void> _addRoutine() async {
-    final period = _period;
-    final palette = RoutinePalette.forPeriod(period);
-    final step = await showModalBottomSheet<RoutineStep>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: palette.card,
-      barrierColor: Colors.black.withValues(alpha: 0.42),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => AddRoutineSheet(period: period, palette: palette),
-    );
-    if (step == null || !mounted) return;
-
-    setState(() {
-      if (period == RoutinePeriod.morning) {
-        _morningSteps = [..._morningSteps, step];
-      } else {
-        _eveningSteps = [..._eveningSteps, step];
-      }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${step.title} added to ${period.name}.')),
-    );
-  }
-
-  Future<void> _openSettings() async {
-    final period = _period;
-    final palette = RoutinePalette.forPeriod(period);
-    final result = await showModalBottomSheet<RoutineSettingsResult>(
-      context: context,
-      backgroundColor: palette.card,
-      barrierColor: Colors.black.withValues(alpha: 0.42),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => RoutineSettingsSheet(
-        period: period,
-        palette: palette,
-        autoAdvanceToEvening: _autoAdvanceToEvening,
-      ),
-    );
-    if (result == null || !mounted) return;
-
-    setState(() {
-      _autoAdvanceToEvening = result.autoAdvanceToEvening;
-      if (result.resetProgress) {
-        final reset = _steps
-            .map((step) => step.copyWith(isCompleted: false))
-            .toList();
-        if (period == RoutinePeriod.morning) {
-          _morningSteps = reset;
-        } else {
-          _eveningSteps = reset;
-        }
-      }
-      if (result.switchToEvening) _period = RoutinePeriod.evening;
-    });
-
-    if (result.resetProgress) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('${period.name} progress reset.')));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final palette = RoutinePalette.forPeriod(_period);
@@ -258,8 +199,14 @@ class _RoutineScreenState extends State<RoutineScreen> {
         curve: Curves.easeOutCubic,
         color: palette.background,
         child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+          child: RefreshIndicator(
+            onRefresh: _refreshRoutine,
+            color: palette.accent,
+            backgroundColor: palette.background,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
             padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
             child: Center(
               child: ConstrainedBox(
@@ -310,8 +257,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
                         period: _period,
                         palette: palette,
                         onEnterFocusMode: _enterFocusMode,
-                        onAddRoutine: _addRoutine,
-                        onOpenSettings: _openSettings,
                       ),
                     ],
                   ),
