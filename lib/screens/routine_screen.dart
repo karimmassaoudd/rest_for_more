@@ -207,65 +207,66 @@ class _RoutineScreenState extends State<RoutineScreen> {
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 260),
-                  child: Column(
-                    key: ValueKey(_period),
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GreetingHeader(period: _period, palette: palette),
-                      const SizedBox(height: 24),
-                      RoutineSwitcher(
-                        selected: _period,
-                        palette: palette,
-                        onChanged: _selectPeriod,
-                      ),
-                      const SizedBox(height: 18),
-                      ActiveRoutineCard(
-                        period: _period,
-                        palette: palette,
-                        completed: _completed,
-                        total: _steps.length,
-                      ),
-                      const SizedBox(height: 28),
-                      _FlowHeading(remaining: _remaining, palette: palette),
-                      const SizedBox(height: 12),
-                      for (var index = 0; index < _steps.length; index++)
-                        RoutineItemCard(
-                          step: _steps[index],
-                          index: index,
-                          isActive: index == activeIndex,
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 520),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    child: Column(
+                      key: ValueKey(_period),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        GreetingHeader(period: _period, palette: palette),
+                        const SizedBox(height: 24),
+                        RoutineSwitcher(
+                          selected: _period,
                           palette: palette,
-                          onToggle: () => _toggleStep(index),
+                          onChanged: _selectPeriod,
                         ),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 260),
-                        child: isComplete
-                            ? _CompletionBanner(
-                                key: ValueKey('complete-${_period.name}'),
-                                period: _period,
-                                palette: palette,
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                      const SizedBox(height: 14),
-                      BottomActionDock(
-                        period: _period,
-                        palette: palette,
-                        onEnterFocusMode: _enterFocusMode,
-                      ),
-                    ],
+                        const SizedBox(height: 18),
+                        ActiveRoutineCard(
+                          period: _period,
+                          palette: palette,
+                          completed: _completed,
+                          total: _steps.length,
+                        ),
+                        const SizedBox(height: 28),
+                        _FlowHeading(remaining: _remaining, palette: palette),
+                        const SizedBox(height: 12),
+                        for (var index = 0; index < _steps.length; index++)
+                          RoutineItemCard(
+                            step: _steps[index],
+                            index: index,
+                            isActive: index == activeIndex,
+                            palette: palette,
+                            onToggle: () => _toggleStep(index),
+                          ),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 260),
+                          child: isComplete
+                              ? _CompletionBanner(
+                                  key: ValueKey('complete-${_period.name}'),
+                                  period: _period,
+                                  palette: palette,
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                        const SizedBox(height: 14),
+                        BottomActionDock(
+                          period: _period,
+                          palette: palette,
+                          onEnterFocusMode: _enterFocusMode,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ),
-      ),
+            ),          // SingleChildScrollView
+          ),            // RefreshIndicator
+        ),              // SafeArea
+      ),                // AnimatedContainer
     );
   }
 }

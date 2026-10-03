@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="1200" height="700" fill="#17191d"/>
+  <rect x="38" y="38" width="1124" height="624" rx="8" fill="#202329" stroke="#3a3f49"/>
+  <rect x="38" y="38" width="1124" height="58" rx="8" fill="#2b2f36"/>
+  <circle cx="72" cy="67" r="8" fill="#ef6b73"/>
+  <circle cx="98" cy="67" r="8" fill="#e8b45b"/>
+  <circle cx="124" cy="67" r="8" fill="#69c28d"/>
+  <text x="600" y="75" fill="#d7dce4" font-family="Arial, sans-serif" font-size="19" text-anchor="middle">Rest For More - Widget Test Evidence</text>
+
+  <g font-family="Consolas, monospace" font-size="21">
+    <text x="78" y="145" fill="#9da7b5">PS&gt; flutter test test\widget_test.dart</text>
+    <text x="78" y="197" fill="#70d694">[PASS]</text>
+    <text x="182" y="197" fill="#ecf0f5">morning progress updates when active step is checked</text>
+    <text x="78" y="243" fill="#70d694">[PASS]</text>
+    <text x="182" y="243" fill="#ecf0f5">evening mode has independent routine state</text>
+    <text x="78" y="289" fill="#70d694">[PASS]</text>
+    <text x="182" y="289" fill="#ecf0f5">finishing morning automatically opens evening routine</text>
+    <text x="78" y="335" fill="#70d694">[PASS]</text>
+    <text x="182" y="335" fill="#ecf0f5">focus mode opens and completes the active step</text>
+    <text x="78" y="381" fill="#70d694">[PASS]</text>
+    <text x="182" y="381" fill="#ecf0f5">secondary routine actions are not shown</text>
+
+    <line x1="78" y1="426" x2="1120" y2="426" stroke="#3a3f49"/>
+    <text x="78" y="483" fill="#70d694" font-size="27" font-weight="bold">All tests passed!</text>
+    <text x="78" y="527" fill="#9da7b5">5 tests completed | Exit code: 0</text>
+  </g>
+
+  <rect x="78" y="575" width="1042" height="48" rx="5" fill="#19241f" stroke="#315943"/>
+  <text x="99" y="607" fill="#9ce2b5" font-family="Arial, sans-serif" font-size="18">Verified by Flutter's automated widget-test runner</text>
+</svg>
