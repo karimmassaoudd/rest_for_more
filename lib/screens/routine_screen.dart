@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/routine_step.dart';
+import '../services/routine_progress_storage.dart';
 import '../theme/app_colors.dart';
 import '../widgets/active_routine_card.dart';
 import '../widgets/bottom_action_dock.dart';
@@ -10,7 +13,12 @@ import '../widgets/routine_switcher.dart';
 import 'focus_mode_screen.dart';
 
 class RoutineScreen extends StatefulWidget {
-  const RoutineScreen({super.key});
+  const RoutineScreen({
+    super.key,
+    this.progressStorage = const RoutineProgressStorage(),
+  });
+
+  final RoutineProgressStorage progressStorage;
 
   @override
   State<RoutineScreen> createState() => _RoutineScreenState();
@@ -83,12 +91,63 @@ class _RoutineScreenState extends State<RoutineScreen> {
   int get _completed => _steps.where((step) => step.isCompleted).length;
   int get _remaining => _steps.length - _completed;
 
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadProgress());
+  }
+
+  Future<void> _loadProgress() async {
+    try {
+      final results = await Future.wait([
+        widget.progressStorage.loadCompletedTasks(RoutinePeriod.morning),
+        widget.progressStorage.loadCompletedTasks(RoutinePeriod.evening),
+      ]);
+      if (!mounted) return;
+
+      setState(() {
+        _morningSteps = _applySavedProgress(_morningSteps, results[0]);
+        _eveningSteps = _applySavedProgress(_eveningSteps, results[1]);
+      });
+    } catch (_) {
+      // Keep the in-memory defaults if local storage is unavailable.
+    }
+  }
+
+  List<RoutineStep> _applySavedProgress(
+    List<RoutineStep> steps,
+    Set<String>? completedTitles,
+  ) {
+    if (completedTitles == null) return steps;
+    return steps
+        .map(
+          (step) =>
+              step.copyWith(isCompleted: completedTitles.contains(step.title)),
+        )
+        .toList();
+  }
+
+  Future<void> _saveProgress(RoutinePeriod period) async {
+    final steps = period == RoutinePeriod.morning
+        ? _morningSteps
+        : _eveningSteps;
+    try {
+      await widget.progressStorage.saveCompletedTasks(period, steps);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save routine progress.')),
+      );
+    }
+  }
+
   void _selectPeriod(RoutinePeriod period) {
     if (_period == period) return;
     setState(() => _period = period);
   }
 
   void _toggleStep(int index) {
+    final period = _period;
     final wasCompleted = _steps[index].isCompleted;
     setState(() {
       final source = _period == RoutinePeriod.morning
@@ -104,6 +163,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
         _eveningSteps = updated;
       }
     });
+
+    unawaited(_saveProgress(period));
 
     if (!wasCompleted) _scheduleEveningTransition();
   }
@@ -124,6 +185,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
         _eveningSteps = updated;
       }
     });
+    unawaited(_saveProgress(period));
     _scheduleEveningTransition();
   }
 
@@ -149,15 +211,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
   }
 
   Future<void> _refreshRoutine() async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-    setState(() {
-      _morningSteps = _morningSteps
-          .map((s) => s.copyWith(isCompleted: false))
-          .toList();
-      _eveningSteps = _eveningSteps
-          .map((s) => s.copyWith(isCompleted: false))
-          .toList();
-    });
+    await _loadProgress();
   }
 
   Future<void> _enterFocusMode() async {
@@ -179,6 +233,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
         builder: (_) => FocusModeScreen(
           period: period,
           step: _steps[index],
+          nextStep: _nextIncompleteStep(index),
           palette: RoutinePalette.forPeriod(period),
         ),
       ),
@@ -186,10 +241,21 @@ class _RoutineScreenState extends State<RoutineScreen> {
     if (completed == true && mounted) _completeStep(index, period);
   }
 
+  RoutineStep? _nextIncompleteStep(int currentIndex) {
+    for (var index = currentIndex + 1; index < _steps.length; index++) {
+      if (!_steps[index].isCompleted) return _steps[index];
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = RoutinePalette.forPeriod(_period);
     final activeIndex = _steps.indexWhere((step) => !step.isCompleted);
+    final currentStep = activeIndex == -1 ? null : _steps[activeIndex];
+    final nextStep = activeIndex == -1
+        ? null
+        : _nextIncompleteStep(activeIndex);
     final isComplete = _remaining == 0;
 
     return Scaffold(
@@ -231,6 +297,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           completed: _completed,
                           total: _steps.length,
                         ),
+                        const SizedBox(height: 14),
+                        _TaskPreview(
+                          currentStep: currentStep,
+                          nextStep: nextStep,
+                          palette: palette,
+                        ),
                         const SizedBox(height: 28),
                         _FlowHeading(remaining: _remaining, palette: palette),
                         const SizedBox(height: 12),
@@ -263,10 +335,94 @@ class _RoutineScreenState extends State<RoutineScreen> {
                   ),
                 ),
               ),
-            ),          // SingleChildScrollView
-          ),            // RefreshIndicator
-        ),              // SafeArea
-      ),                // AnimatedContainer
+            ), // SingleChildScrollView
+          ), // RefreshIndicator
+        ), // SafeArea
+      ), // AnimatedContainer
+    );
+  }
+}
+
+class _TaskPreview extends StatelessWidget {
+  const _TaskPreview({
+    required this.currentStep,
+    required this.nextStep,
+    required this.palette,
+  });
+
+  final RoutineStep? currentStep;
+  final RoutineStep? nextStep;
+  final RoutinePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: palette.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _TaskPreviewRow(
+            label: 'Current task',
+            value: currentStep?.title ?? 'Routine complete',
+            palette: palette,
+          ),
+          const SizedBox(height: 8),
+          _TaskPreviewRow(
+            label: 'Next task',
+            value: nextStep?.title ?? 'Routine complete',
+            palette: palette,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TaskPreviewRow extends StatelessWidget {
+  const _TaskPreviewRow({
+    required this.label,
+    required this.value,
+    required this.palette,
+  });
+
+  final String label;
+  final String value;
+  final RoutinePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 82,
+          child: Text(
+            '$label:',
+            style: TextStyle(
+              color: palette.muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            key: Key(label.toLowerCase().replaceAll(' ', '-')),
+            style: TextStyle(
+              color: palette.text,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

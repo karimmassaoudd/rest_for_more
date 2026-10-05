@@ -10,11 +10,13 @@ class FocusModeScreen extends StatefulWidget {
     super.key,
     required this.period,
     required this.step,
+    required this.nextStep,
     required this.palette,
   });
 
   final RoutinePeriod period;
   final RoutineStep step;
+  final RoutineStep? nextStep;
   final RoutinePalette palette;
 
   @override
@@ -75,6 +77,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
     final minutes = (_secondsRemaining ~/ 60).toString().padLeft(2, '0');
     final seconds = (_secondsRemaining % 60).toString().padLeft(2, '0');
     final morning = widget.period == RoutinePeriod.morning;
+    final timerFinished = _secondsRemaining == 0;
 
     return Scaffold(
       backgroundColor: widget.palette.background,
@@ -131,7 +134,29 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                   height: 1.1,
                 ),
               ),
-              const SizedBox(height: 36),
+              const SizedBox(height: 12),
+              Text(
+                'Current task',
+                style: TextStyle(
+                  color: widget.palette.muted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.nextStep == null
+                    ? 'Next task: Routine complete'
+                    : 'Next task: ${widget.nextStep!.title}',
+                key: const Key('focus-next-task'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: widget.palette.muted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 30),
               Text(
                 '$minutes:$seconds',
                 key: const Key('focus-timer'),
@@ -143,21 +168,57 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              OutlinedButton.icon(
-                key: const Key('pause-focus-button'),
-                onPressed: _toggleTimer,
-                icon: Icon(
-                  _isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                ),
-                label: Text(_isRunning ? 'Pause' : 'Continue'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: widget.palette.text,
-                  side: BorderSide(color: widget.palette.border),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 13,
-                  ),
-                ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: timerFinished
+                    ? Container(
+                        key: const Key('focus-timer-finished'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.palette.accentSoft,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: widget.palette.accent),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: widget.palette.accent,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Task finished',
+                              style: TextStyle(
+                                color: widget.palette.text,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : OutlinedButton.icon(
+                        key: const Key('pause-focus-button'),
+                        onPressed: _toggleTimer,
+                        icon: Icon(
+                          _isRunning
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                        ),
+                        label: Text(_isRunning ? 'Pause' : 'Continue'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: widget.palette.text,
+                          side: BorderSide(color: widget.palette.border),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 13,
+                          ),
+                        ),
+                      ),
               ),
               const Spacer(),
               SizedBox(
@@ -167,7 +228,9 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                   key: const Key('complete-focus-step-button'),
                   onPressed: () => Navigator.pop(context, true),
                   icon: const Icon(Icons.check_rounded),
-                  label: const Text('Complete this step'),
+                  label: Text(
+                    timerFinished ? 'Complete task' : 'Complete this step',
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: widget.palette.button,
                     foregroundColor: widget.palette.buttonText,
