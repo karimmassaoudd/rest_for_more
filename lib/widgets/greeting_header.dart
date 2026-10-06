@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/routine_step.dart';
 import '../theme/app_colors.dart';
+import 'rfm_logo.dart';
 
 class GreetingHeader extends StatelessWidget {
   const GreetingHeader({
@@ -25,17 +26,8 @@ class GreetingHeader extends StatelessWidget {
       children: [
         Row(
           children: [
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              tooltip: 'Back',
-              onPressed: onBack,
-              icon: Icon(
-                Icons.arrow_back_rounded,
-                color: palette.text,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 4),
+            RfmLogo(onTap: onBack),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 isMorning ? 'Morning' : 'Evening',

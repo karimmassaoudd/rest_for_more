@@ -16,6 +16,7 @@ void main() {
   ) async {
     await tester.pumpWidget(const RestForMeApp());
 
+    expect(find.byKey(const Key('rfm-logo')), findsOneWidget);
     expect(find.byKey(const ValueKey('header-morning')), findsOneWidget);
     expect(find.text('Your morning'), findsOneWidget);
     expect(find.text('3/5'), findsOneWidget);
