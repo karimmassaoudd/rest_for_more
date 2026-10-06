@@ -20,12 +20,12 @@ class RoutineSwitcher extends StatelessWidget {
     return Semantics(
       label: 'Routine time',
       child: Container(
-        height: 58,
-        padding: const EdgeInsets.all(5),
+        height: 42,
+        padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
           color: palette.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: palette.border.withValues(alpha: 0.75)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: palette.border.withValues(alpha: 0.28)),
         ),
         child: Row(
           children: [
@@ -40,7 +40,7 @@ class RoutineSwitcher extends StatelessWidget {
             _SwitcherOption(
               key: const Key('evening-switch'),
               label: 'Evening',
-              icon: Icons.nightlight_round,
+              icon: Icons.nightlight_outlined,
               selected: selected == RoutinePeriod.evening,
               palette: palette,
               onTap: () => onChanged(RoutinePeriod.evening),
@@ -78,19 +78,18 @@ class _SwitcherOption extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(9),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 230),
-              curve: Curves.easeOutCubic,
+              duration: const Duration(milliseconds: 220),
               decoration: BoxDecoration(
                 color: selected ? palette.card : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(9),
                 boxShadow: selected
                     ? [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.07),
-                          blurRadius: 16,
-                          offset: const Offset(0, 5),
+                          color: palette.text.withValues(alpha: 0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ]
                     : null,
@@ -100,15 +99,15 @@ class _SwitcherOption extends StatelessWidget {
                 children: [
                   Icon(
                     icon,
-                    size: 17,
+                    size: 14,
                     color: selected ? palette.accent : palette.muted,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Text(
                     label,
                     style: TextStyle(
                       color: selected ? palette.text : palette.muted,
-                      fontSize: 13,
+                      fontSize: 11.5,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                     ),
                   ),

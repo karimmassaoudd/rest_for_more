@@ -16,7 +16,8 @@ void main() {
   ) async {
     await tester.pumpWidget(const RestForMeApp());
 
-    expect(find.text('Good morning,\nElena'), findsOneWidget);
+    expect(find.byKey(const ValueKey('header-morning')), findsOneWidget);
+    expect(find.text('Your morning'), findsOneWidget);
     expect(find.text('3/5'), findsOneWidget);
     expect(find.text('2 steps remaining'), findsOneWidget);
 
@@ -38,8 +39,9 @@ void main() {
     await tester.tap(eveningSwitch);
     await tester.pumpAndSettle();
 
-    expect(find.text('Good evening,\nElena'), findsOneWidget);
-    expect(find.text('Restorative\nWind-Down'), findsOneWidget);
+    expect(find.byKey(const ValueKey('header-evening')), findsOneWidget);
+    expect(find.text('I WANT TO SLEEP AT'), findsOneWidget);
+    expect(find.text('10:30 PM'), findsOneWidget);
     expect(find.text('0/5'), findsOneWidget);
     expect(find.text('5 steps remaining'), findsOneWidget);
 
@@ -135,8 +137,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
-    expect(find.text('Good evening,\nElena'), findsOneWidget);
-    expect(find.text('Restorative\nWind-Down'), findsOneWidget);
+    expect(find.byKey(const ValueKey('header-evening')), findsOneWidget);
+    expect(find.text('I WANT TO SLEEP AT'), findsOneWidget);
   });
 
   testWidgets('focus mode opens and completes the active step', (tester) async {
@@ -203,11 +205,12 @@ void main() {
     expect(find.text('Next task: Following task'), findsOneWidget);
   });
 
-  testWidgets('secondary routine actions are not shown', (tester) async {
+  testWidgets('reference-style routine actions are shown', (tester) async {
     await tester.pumpWidget(const RestForMeApp());
 
-    expect(find.text('Add Routine'), findsNothing);
-    expect(find.text('Routine Settings'), findsNothing);
+    expect(find.byKey(const Key('add-step-button')), findsOneWidget);
+    expect(find.text('Add step'), findsOneWidget);
+    expect(find.text('Start your morning'), findsOneWidget);
     expect(find.byKey(const Key('focus-mode-button')), findsOneWidget);
   });
 }

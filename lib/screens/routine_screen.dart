@@ -9,6 +9,7 @@ import '../widgets/active_routine_card.dart';
 import '../widgets/bottom_action_dock.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/routine_item_card.dart';
+import '../widgets/routine_action_sheets.dart';
 import '../widgets/routine_switcher.dart';
 import 'focus_mode_screen.dart';
 
@@ -26,6 +27,7 @@ class RoutineScreen extends StatefulWidget {
 
 class _RoutineScreenState extends State<RoutineScreen> {
   RoutinePeriod _period = RoutinePeriod.morning;
+  bool _autoAdvanceToEvening = true;
 
   List<RoutineStep> _morningSteps = const [
     RoutineStep(
@@ -90,6 +92,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
       _period == RoutinePeriod.morning ? _morningSteps : _eveningSteps;
   int get _completed => _steps.where((step) => step.isCompleted).length;
   int get _remaining => _steps.length - _completed;
+  int get _totalMinutes => _steps.fold(0, (total, step) {
+    final minutes = int.tryParse(
+      RegExp(r'\d+').firstMatch(step.duration)?.group(0) ?? '',
+    );
+    return total + (minutes ?? 0);
+  });
 
   @override
   void initState() {
@@ -190,7 +198,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
   }
 
   void _scheduleEveningTransition() {
-    if (_period != RoutinePeriod.morning ||
+    if (!_autoAdvanceToEvening ||
+        _period != RoutinePeriod.morning ||
         _morningSteps.any((step) => !step.isCompleted)) {
       return;
     }
@@ -212,6 +221,65 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   Future<void> _refreshRoutine() async {
     await _loadProgress();
+  }
+
+  Future<void> _addStep() async {
+    final period = _period;
+    final palette = RoutinePalette.forPeriod(period);
+    final step = await showModalBottomSheet<RoutineStep>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => AddRoutineSheet(period: period, palette: palette),
+    );
+    if (step == null || !mounted) return;
+
+    setState(() {
+      if (period == RoutinePeriod.morning) {
+        _morningSteps = [..._morningSteps, step];
+      } else {
+        _eveningSteps = [..._eveningSteps, step];
+      }
+    });
+    unawaited(_saveProgress(period));
+  }
+
+  Future<void> _openSettings() async {
+    final period = _period;
+    final palette = RoutinePalette.forPeriod(period);
+    final result = await showModalBottomSheet<RoutineSettingsResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => RoutineSettingsSheet(
+        period: period,
+        palette: palette,
+        autoAdvanceToEvening: _autoAdvanceToEvening,
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    setState(() {
+      _autoAdvanceToEvening = result.autoAdvanceToEvening;
+      if (result.resetProgress) {
+        final resetSteps = _steps
+            .map((step) => step.copyWith(isCompleted: false))
+            .toList();
+        if (period == RoutinePeriod.morning) {
+          _morningSteps = resetSteps;
+        } else {
+          _eveningSteps = resetSteps;
+        }
+      }
+      if (result.switchToEvening) _period = RoutinePeriod.evening;
+    });
+    if (result.resetProgress) unawaited(_saveProgress(period));
   }
 
   Future<void> _enterFocusMode() async {
@@ -273,7 +341,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 520),
@@ -283,27 +351,45 @@ class _RoutineScreenState extends State<RoutineScreen> {
                       key: ValueKey(_period),
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        GreetingHeader(period: _period, palette: palette),
-                        const SizedBox(height: 24),
+                        GreetingHeader(
+                          period: _period,
+                          palette: palette,
+                          onBack: () {
+                            if (_period == RoutinePeriod.evening) {
+                              _selectPeriod(RoutinePeriod.morning);
+                            } else {
+                              Navigator.maybePop(context);
+                            }
+                          },
+                          onAction: () {
+                            if (_period == RoutinePeriod.morning) {
+                              unawaited(_refreshRoutine());
+                            } else {
+                              unawaited(_openSettings());
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         RoutineSwitcher(
                           selected: _period,
                           palette: palette,
                           onChanged: _selectPeriod,
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 14),
                         ActiveRoutineCard(
                           period: _period,
                           palette: palette,
                           completed: _completed,
                           total: _steps.length,
+                          totalMinutes: _totalMinutes,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         _TaskPreview(
                           currentStep: currentStep,
                           nextStep: nextStep,
                           palette: palette,
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 22),
                         _FlowHeading(remaining: _remaining, palette: palette),
                         const SizedBox(height: 12),
                         for (var index = 0; index < _steps.length; index++)
@@ -311,6 +397,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                             step: _steps[index],
                             index: index,
                             isActive: index == activeIndex,
+                            period: _period,
                             palette: palette,
                             onToggle: () => _toggleStep(index),
                           ),
@@ -324,11 +411,46 @@ class _RoutineScreenState extends State<RoutineScreen> {
                                 )
                               : const SizedBox.shrink(),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: OutlinedButton.icon(
+                            key: const Key('add-step-button'),
+                            onPressed: _addStep,
+                            icon: const Icon(Icons.add_rounded, size: 16),
+                            label: const Text('Add step'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: palette.accent,
+                              backgroundColor: palette.background,
+                              side: BorderSide(color: palette.border),
+                              textStyle: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
                         BottomActionDock(
                           period: _period,
                           palette: palette,
                           onEnterFocusMode: _enterFocusMode,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _period == RoutinePeriod.morning
+                              ? 'Your times follow your wake-up time. Adjust a step whenever your morning changes.'
+                              : 'Times count back from your bedtime. Move your bedtime and your evening moves with it.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: palette.muted,
+                            fontSize: 9.5,
+                            height: 1.4,
+                          ),
                         ),
                       ],
                     ),
@@ -360,20 +482,22 @@ class _TaskPreview extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: palette.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.border),
+        color: palette.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.border.withValues(alpha: 0.32)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _TaskPreviewRow(
+            icon: Icons.play_circle_outline_rounded,
             label: 'Current task',
             value: currentStep?.title ?? 'Routine complete',
             palette: palette,
           ),
           const SizedBox(height: 8),
           _TaskPreviewRow(
+            icon: Icons.arrow_forward_rounded,
             label: 'Next task',
             value: nextStep?.title ?? 'Routine complete',
             palette: palette,
@@ -389,19 +513,23 @@ class _TaskPreviewRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.palette,
+    required this.icon,
   });
 
   final String label;
   final String value;
   final RoutinePalette palette;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Icon(icon, color: palette.accent, size: 15),
+        const SizedBox(width: 9),
         SizedBox(
-          width: 82,
+          width: 76,
           child: Text(
             '$label:',
             style: TextStyle(
@@ -438,7 +566,7 @@ class _FlowHeading extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          "TODAY'S FLOW",
+          'YOUR STEPS',
           style: TextStyle(
             color: palette.text,
             fontSize: 10,
@@ -481,8 +609,8 @@ class _CompletionBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       decoration: BoxDecoration(
         color: palette.accentSoft,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: palette.accent.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: palette.accent.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

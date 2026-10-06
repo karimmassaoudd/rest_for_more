@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../models/routine_step.dart';
 import '../theme/app_colors.dart';
-import 'metadata_chip.dart';
 
 class GreetingHeader extends StatelessWidget {
   const GreetingHeader({
     super.key,
     required this.period,
     required this.palette,
+    required this.onBack,
+    required this.onAction,
   });
 
   final RoutinePeriod period;
   final RoutinePalette palette;
+  final VoidCallback onBack;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -21,118 +24,63 @@ class GreetingHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'THURSDAY, SEPTEMBER 15',
-                    style: TextStyle(
-                      color: palette.muted,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.65,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
-                    child: Text.rich(
-                      key: ValueKey(period),
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text:
-                                '${isMorning ? 'Good morning' : 'Good evening'},\n',
-                          ),
-                          const TextSpan(
-                            text: 'Elena',
-                            style: TextStyle(fontStyle: FontStyle.italic),
-                          ),
-                        ],
-                      ),
-                      style: TextStyle(
-                        color: palette.text,
-                        fontFamily: 'serif',
-                        fontSize: 37,
-                        height: 1.03,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: -1.1,
-                      ),
-                    ),
-                  ),
-                ],
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Back',
+              onPressed: onBack,
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: palette.text,
+                size: 20,
               ),
             ),
-            _WeatherPill(isMorning: isMorning, palette: palette),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            MetadataChip(
-              icon: Icons.local_fire_department_rounded,
-              label: '5-day streak',
-              palette: palette,
-            ),
-            MetadataChip(
-              icon: Icons.schedule_rounded,
-              label: 'Total routine: 35 min',
-              palette: palette,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _WeatherPill extends StatelessWidget {
-  const _WeatherPill({required this.isMorning, required this.palette});
-  final bool isMorning;
-  final RoutinePalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: palette.card.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: palette.border),
-        boxShadow: isMorning
-            ? const [
-                BoxShadow(
-                  color: Color(0x20D8A35F),
-                  blurRadius: 18,
-                  spreadRadius: 2,
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                isMorning ? 'Morning' : 'Evening',
+                key: ValueKey('header-${period.name}'),
+                style: TextStyle(
+                  color: palette.text,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
-              ]
-            : null,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isMorning ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-            size: 16,
-            color: isMorning ? AppColors.amber : AppColors.eveningAmber,
-          ),
-          const SizedBox(width: 6),
+              ),
+            ),
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              tooltip: isMorning ? 'Refresh routine' : 'Routine settings',
+              onPressed: onAction,
+              icon: Icon(
+                isMorning ? Icons.refresh_rounded : Icons.more_vert_rounded,
+                color: palette.text,
+                size: 19,
+              ),
+            ),
+          ],
+        ),
+        if (isMorning) ...[
+          const SizedBox(height: 18),
           Text(
-            isMorning ? '68°' : '62°',
+            'Your morning',
             style: TextStyle(
               color: palette.text,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+              fontFamily: 'serif',
+              fontSize: 27,
+              height: 1,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Text(
+            'Set everything ready for the day ahead. Put your phone away and let yourself start slowly.',
+            style: TextStyle(
+              color: palette.muted,
+              fontSize: 11.5,
+              height: 1.45,
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 }

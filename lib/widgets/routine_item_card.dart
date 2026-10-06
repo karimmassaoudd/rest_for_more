@@ -9,154 +9,177 @@ class RoutineItemCard extends StatelessWidget {
     required this.step,
     required this.index,
     required this.isActive,
+    required this.period,
     required this.palette,
     required this.onToggle,
   });
+
   final RoutineStep step;
   final int index;
   final bool isActive;
+  final RoutinePeriod period;
   final RoutinePalette palette;
   final VoidCallback onToggle;
+
+  IconData _iconForStep() {
+    final title = step.title.toLowerCase();
+    if (title.contains('water') ||
+        title.contains('matcha') ||
+        title.contains('chamomile')) {
+      return Icons.local_drink_outlined;
+    }
+    if (title.contains('shower')) return Icons.shower_outlined;
+    if (title.contains('breath') || title.contains('stretch')) {
+      return Icons.self_improvement_outlined;
+    }
+    if (title.contains('journal')) return Icons.edit_note_rounded;
+    if (title.contains('phone') || title.contains('screen')) {
+      return Icons.phone_iphone_rounded;
+    }
+    if (title.contains('priority')) return Icons.checklist_rounded;
+    if (title.contains('skincare')) return Icons.spa_outlined;
+    return Icons.circle_outlined;
+  }
 
   @override
   Widget build(BuildContext context) {
     final completed = step.isCompleted;
+    final evening = period == RoutinePeriod.evening;
+
     return Semantics(
       button: true,
       checked: completed,
       label: '${step.title}, ${step.time}, ${step.duration}',
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.fromLTRB(15, 14, 12, 14),
-        decoration: BoxDecoration(
-          color: completed
-              ? palette.accentSoft.withValues(alpha: 0.58)
-              : palette.card,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isActive
-                ? palette.accent.withValues(alpha: 0.68)
-                : palette.border,
-            width: isActive ? 1.35 : 1,
-          ),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: palette.accent.withValues(alpha: 0.13),
-                    blurRadius: 22,
-                    offset: const Offset(0, 7),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            _CompletionControl(
-              key: Key('routine-toggle-$index'),
-              completed: completed,
-              active: isActive,
-              palette: palette,
-              onTap: onToggle,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: isActive && !completed ? Key('check-button-$index') : null,
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
+            decoration: BoxDecoration(
+              color: evening
+                  ? palette.card
+                  : completed
+                  ? palette.accentSoft.withValues(alpha: 0.38)
+                  : isActive
+                  ? palette.card.withValues(alpha: 0.72)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isActive
+                    ? palette.accent.withValues(alpha: 0.38)
+                    : evening
+                    ? Colors.transparent
+                    : palette.border.withValues(alpha: 0.18),
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: palette.text.withValues(alpha: 0.045),
+                        blurRadius: 14,
+                        offset: const Offset(0, 5),
+                      ),
+                    ]
+                  : null,
             ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    step.time.replaceAll(' AM', '').replaceAll(' PM', ''),
                     style: TextStyle(
-                      color: completed
-                          ? palette.muted.withValues(alpha: 0.92)
-                          : palette.text,
-                      fontSize: 13.5,
-                      height: 1.2,
-                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                      decoration: completed ? TextDecoration.lineThrough : null,
-                      decorationColor: palette.muted,
-                      decorationThickness: 1.2,
+                      color: completed ? palette.muted : palette.text,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
+                ),
+                _CompletionControl(
+                  key: Key('routine-toggle-$index'),
+                  completed: completed,
+                  active: isActive,
+                  icon: _iconForStep(),
+                  palette: palette,
+                  onTap: onToggle,
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        step.time,
+                        step.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: palette.muted,
-                          fontSize: 10.5,
+                          color: completed ? palette.muted : palette.text,
+                          fontSize: 12.5,
                           fontWeight: FontWeight.w600,
+                          decoration: completed
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Container(
-                          width: 3,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: palette.muted,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.timer_outlined,
-                        size: 12,
-                        color: palette.muted,
-                      ),
-                      const SizedBox(width: 3),
+                      const SizedBox(height: 3),
                       Text(
                         step.duration,
-                        style: TextStyle(
-                          color: palette.muted,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
+                        style: TextStyle(color: palette.muted, fontSize: 9.5),
+                      ),
+                    ],
+                  ),
+                ),
+                if (completed)
+                  Text(
+                    'Done',
+                    style: TextStyle(
+                      color: palette.accent,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                else
+                  PopupMenuButton<String>(
+                    key: Key('routine-menu-$index'),
+                    tooltip: 'Task options',
+                    padding: EdgeInsets.zero,
+                    color: palette.background,
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      color: palette.muted,
+                      size: 17,
+                    ),
+                    onSelected: (_) => onToggle(),
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'complete',
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline_rounded,
+                              color: palette.accent,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Mark as complete',
+                              style: TextStyle(
+                                color: palette.text,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+              ],
             ),
-            const SizedBox(width: 8),
-            if (completed)
-              Text(
-                'Done',
-                style: TextStyle(
-                  color: palette.accent,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-            else if (isActive)
-              Material(
-                color: palette.accent,
-                borderRadius: BorderRadius.circular(999),
-                child: InkWell(
-                  key: Key('check-button-$index'),
-                  onTap: onToggle,
-                  borderRadius: BorderRadius.circular(999),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    child: Text(
-                      'Check',
-                      style: TextStyle(
-                        color: palette.background,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -168,47 +191,39 @@ class _CompletionControl extends StatelessWidget {
     super.key,
     required this.completed,
     required this.active,
+    required this.icon,
     required this.palette,
     required this.onTap,
   });
+
   final bool completed;
   final bool active;
+  final IconData icon;
   final RoutinePalette palette;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.transparent,
+      color: completed ? palette.accent : palette.surface,
+      shape: const CircleBorder(),
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          width: 30,
-          height: 30,
+        child: Container(
+          width: 29,
+          height: 29,
           decoration: BoxDecoration(
-            color: completed ? palette.accent : Colors.transparent,
             shape: BoxShape.circle,
-            border: Border.all(
-              color: completed || active ? palette.accent : palette.muted,
-              width: active && !completed ? 2 : 1.3,
-            ),
+            border: active && !completed
+                ? Border.all(color: palette.accent, width: 1.2)
+                : null,
           ),
-          child: completed
-              ? Icon(Icons.check_rounded, size: 18, color: palette.background)
-              : active
-              ? Center(
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: palette.accent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                )
-              : null,
+          child: Icon(
+            completed ? Icons.check_rounded : icon,
+            size: 15,
+            color: completed ? palette.buttonText : palette.muted,
+          ),
         ),
       ),
     );
