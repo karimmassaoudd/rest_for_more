@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../data/Save_activities.dart';
+import '../data/save_activities.dart';
 import '../models/activity.dart';
 
 void main() {
@@ -38,20 +40,110 @@ class _Design {
 }
 
 class EveningPage extends StatefulWidget {
-  const EveningPage({super.key});
+  const EveningPage({
+    super.key,
+    this.activitiesStorage = const SaveActivities(),
+  });
+
+  final SaveActivities activitiesStorage;
 
   @override
   State<EveningPage> createState() => _RoutinePage();
 }
 
 class _RoutinePage extends State<EveningPage> {
-  final activities = getActivities();
+  late final List<Activity> activities;
+  String _sleepTime = defaultRoutineSleepTime;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    activities = widget.activitiesStorage.getActivities();
+    unawaited(_loadSleepTime());
+  }
+
+  Future<void> _loadSleepTime() async {
+    try {
+      final sleepTime = await widget.activitiesStorage.loadRoutineSleepTime();
+      if (!mounted) return;
+
+      setState(() {
+        _sleepTime = sleepTime;
+        _updateSleepActivityTime();
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bedtijd laden is mislukt: $error')),
+      );
+    }
+  }
+
+  Future<void> _chooseSleepTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: _parseTime(_sleepTime),
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        );
+      },
+    );
+
+    if (time == null || !mounted) return;
+    setState(() {
+      _sleepTime = _formatMilitaryTime(time);
+      _updateSleepActivityTime();
+    });
+  }
+
+  Future<void> _saveRoutine() async {
+    setState(() => _isSaving = true);
+    try {
+      await widget.activitiesStorage.saveRoutineSleepTime(_sleepTime);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Routine opgeslagen.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Routine opslaan is mislukt: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  void _updateSleepActivityTime() {
+    for (final activity in activities) {
+      if (activity.name == 'Slapen') {
+        activity.time = _sleepTime;
+        return;
+      }
+    }
+  }
+
+  TimeOfDay _parseTime(String value) {
+    final parts = value.split(':');
+    return TimeOfDay(
+      hour: int.tryParse(parts.first) ?? 0,
+      minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0,
+    );
+  }
+
+  String _formatMilitaryTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
 
   List<Activity> get displayedActivities {
     final sortedActivities = [...activities];
     sortedActivities.sort((a, b) {
-      final aIsSleep = a.time == routineSleepTime;
-      final bIsSleep = b.time == routineSleepTime;
+      final aIsSleep = a.name == 'Slapen';
+      final bIsSleep = b.name == 'Slapen';
 
       if (aIsSleep && !bIsSleep) return 1;
       if (!aIsSleep && bIsSleep) return -1;
@@ -65,7 +157,7 @@ class _RoutinePage extends State<EveningPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _Design.background,
-      builder: (_) => const _ActivitySheet(),
+      builder: (_) => _ActivitySheet(sleepTime: _sleepTime),
     );
 
     if (activity != null && mounted) {
@@ -80,7 +172,8 @@ class _RoutinePage extends State<EveningPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: _Design.background,
-      builder: (_) => _ActivitySheet(activity: sourceActivity),
+      builder: (_) =>
+          _ActivitySheet(activity: sourceActivity, sleepTime: _sleepTime),
     );
 
     if (updatedActivity != null && mounted) {
@@ -105,7 +198,10 @@ class _RoutinePage extends State<EveningPage> {
                   children: [
                     const _TopBar(),
                     const SizedBox(height: 19),
-                    const _SleepSummary(sleepTime: routineSleepTime),
+                    _SleepSummary(
+                      sleepTime: _sleepTime,
+                      onTap: _chooseSleepTime,
+                    ),
                     const SizedBox(height: 21),
                     Text(
                       'JOUW AVOND',
@@ -117,25 +213,23 @@ class _RoutinePage extends State<EveningPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    ...displayedActivities.map(
-                      (activity) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 7),
-                          child: _ActivityTile(
-                            time: activity.time,
-                            title: activity.name,
-                            duration: activity.duration,
-                            icon: activity.icon,
-                            onEdit: () => _editActivity(activity),
-                            onDelete: () {
-                              setState(() {
-                                activities.remove(activity);
-                              });
-                            },
-                          ),
-                        );
-                      },
-                    )
+                    ...displayedActivities.map((activity) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 7),
+                        child: _ActivityTile(
+                          time: activity.time,
+                          title: activity.name,
+                          duration: activity.duration,
+                          icon: activity.icon,
+                          onEdit: () => _editActivity(activity),
+                          onDelete: () {
+                            setState(() {
+                              activities.remove(activity);
+                            });
+                          },
+                        ),
+                      );
+                    }),
                     // const _SleepTile(),
                   ],
                 ),
@@ -150,7 +244,10 @@ class _RoutinePage extends State<EveningPage> {
                     onPressed: _addActivity,
                   ),
                   const SizedBox(height: 9),
-                  _FilledAction(label: 'Routine opslaan'),
+                  _FilledAction(
+                    label: _isSaving ? 'Opslaan...' : 'Routine opslaan',
+                    onPressed: _isSaving ? null : _saveRoutine,
+                  ),
                 ],
               ),
             ),
@@ -160,6 +257,7 @@ class _RoutinePage extends State<EveningPage> {
     );
   }
 }
+
 //top bar with back button and title
 class _TopBar extends StatelessWidget {
   const _TopBar();
@@ -187,15 +285,16 @@ class _TopBar extends StatelessWidget {
 
 //top bar with time
 class _SleepSummary extends StatelessWidget {
-  const _SleepSummary({required this.sleepTime});
+  const _SleepSummary({required this.sleepTime, required this.onTap});
 
   final String sleepTime;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(17, 14, 17, 16),
+      padding: const EdgeInsets.fromLTRB(17, 24, 17, 16),
       decoration: BoxDecoration(
         color: _Design.surface,
         borderRadius: BorderRadius.circular(14),
@@ -205,7 +304,11 @@ class _SleepSummary extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.nightlight_round, size: 14, color: _Design.muted),
+              const Icon(
+                Icons.nightlight_round,
+                size: 14,
+                color: _Design.muted,
+              ),
               const SizedBox(width: 9),
               Text(
                 'IK WIL SLAPEN OM',
@@ -216,23 +319,42 @@ class _SleepSummary extends StatelessWidget {
                   letterSpacing: 1.4,
                 ),
               ),
+              
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            sleepTime,
-            style: TextStyle(
-              color: _Design.ink,
-              fontFamily: 'Georgia',
-              fontSize: 20,
-              fontStyle: FontStyle.italic,
-            ),
+          const SizedBox(height: 8),
+          Row(
+            children: [  
+              const SizedBox(width: 20),
+              Text(
+                sleepTime,
+                style: const TextStyle(
+                  color: _Design.ink,
+                  fontFamily: 'Georgia',
+                  fontSize: 34,
+                  fontStyle: FontStyle.italic,
+              
+                ),
+              ),
+             const Spacer(), 
+             IconButton(
+                onPressed: onTap,
+                tooltip: 'Bedtijd aanpassen',
+                icon: const Icon(Icons.edit_outlined, size: 25),
+                color: _Design.accent,
+                style: IconButton.styleFrom(
+                  backgroundColor: _Design.background,
+                  side: const BorderSide(color: _Design.outline),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 20),
+            ],
           ),
-          const SizedBox(height: 7),
-          const Text(
-            'Je avond begint om 21:30 · 1 uur',
-            style: TextStyle(color: _Design.muted, fontSize: 11),
-          ),
+          // const SizedBox(width: 16),
+          
         ],
       ),
     );
@@ -338,9 +460,10 @@ class _ActivityTile extends StatelessWidget {
 }
 
 class _ActivitySheet extends StatefulWidget {
-  const _ActivitySheet({this.activity});
+  const _ActivitySheet({this.activity, required this.sleepTime});
 
   final Activity? activity;
+  final String sleepTime;
 
   @override
   State<_ActivitySheet> createState() => _ActivitySheetState();
@@ -404,14 +527,21 @@ class _ActivitySheetState extends State<_ActivitySheet> {
 
     if (name.isEmpty || minutes == null || minutes <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vul een naam en geldig aantal minuten in.')),
+        const SnackBar(
+          content: Text('Vul een naam en geldig aantal minuten in.'),
+        ),
       );
       return;
     }
 
-    if (_minutesFromTime(selectedTime) > _minutesFromTime(_parseTime(routineSleepTime))) {
+    if (_minutesFromTime(selectedTime) >
+        _minutesFromTime(_parseTime(widget.sleepTime))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('De activiteit moet om $routineSleepTime of eerder eindigen.')),
+        SnackBar(
+          content: Text(
+            'De activiteit moet om ${widget.sleepTime} of eerder eindigen.',
+          ),
+        ),
       );
       return;
     }
@@ -544,7 +674,9 @@ class _ActivitySheetState extends State<_ActivitySheet> {
                   icon: Icon(icon),
                   color: isSelected ? Colors.white : _Design.accent,
                   style: IconButton.styleFrom(
-                    backgroundColor: isSelected ? _Design.accent : _Design.surface,
+                    backgroundColor: isSelected
+                        ? _Design.accent
+                        : _Design.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(9),
                     ),
@@ -561,7 +693,9 @@ class _ActivitySheetState extends State<_ActivitySheet> {
                   backgroundColor: _Design.accent,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                 ),
-                child: Text(isEditing ? 'Wijzigingen opslaan' : 'Activiteit toevoegen'),
+                child: Text(
+                  isEditing ? 'Wijzigingen opslaan' : 'Activiteit toevoegen',
+                ),
               ),
             ),
           ],
@@ -570,7 +704,6 @@ class _ActivitySheetState extends State<_ActivitySheet> {
     );
   }
 }
-
 
 //Add button
 class _OutlinedAction extends StatelessWidget {
@@ -598,28 +731,34 @@ class _OutlinedAction extends StatelessWidget {
     );
   }
 }
+
 //start session button
 class _FilledAction extends StatelessWidget {
-  const _FilledAction({required this.label});
+  const _FilledAction({required this.label, required this.onPressed});
 
   final String label;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 41,
       width: double.infinity,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: _Design.accent,
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: _Design.accent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(13),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );

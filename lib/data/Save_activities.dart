@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/activity.dart';
 
-const routineSleepTime = '22:30';
+const defaultRoutineSleepTime = '22:30';
 
-//this temp hardcoded data, later this will be collect form a json or other data source
+/// Loads and saves the sleep time and provides the default evening activities.
+class SaveActivities {
+  const SaveActivities();
 
+  static const _routineSleepTimeKey = 'routine_sleep_time';
 
-List<Activity> getActivities() {
-  final list = <Activity>  [
+  Future<String> loadRoutineSleepTime() async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.getString(_routineSleepTimeKey) ??
+        defaultRoutineSleepTime;
+  }
+
+  Future<void> saveRoutineSleepTime(String time) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_routineSleepTimeKey, time);
+  }
+
+  List<Activity> getActivities() => [
     Activity(
       time: '21:30',
       name: 'Telefoon wegleggen',
@@ -40,11 +54,10 @@ List<Activity> getActivities() {
       icon: Icons.menu_book_outlined,
     ),
     Activity(
-      time: '22:30',
+      time: defaultRoutineSleepTime,
       name: 'Slapen',
       duration: '0 min',
       icon: Icons.bed_outlined,
     ),
   ];
-  return list;
 }
