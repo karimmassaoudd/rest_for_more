@@ -25,14 +25,17 @@ class AppColors {
   static const amber = Color(0xFFB98965);
   static const amberSoft = brownSoft;
 
-  static const eveningBackground = background;
-  static const eveningSurface = surface;
-  static const eveningCard = card;
-  static const eveningBorder = border;
-  static const eveningText = text;
-  static const eveningMuted = muted;
-  static const eveningAmber = brown;
-  static const moonSage = brown;
+  static const eveningBackground = Color(0xFF211B18);
+  static const eveningSurface = Color(0xFF2A231F);
+  static const eveningCard = Color(0xFF342B26);
+  static const eveningBorder = Color(0xFF514238);
+  static const eveningText = Color(0xFFF6EFE7);
+  static const eveningMuted = Color(0xFFBDAA98);
+  static const eveningAmber = Color(0xFFD6A46F);
+  static const eveningAccentSoft = Color(0xFF493A2E);
+  static const eveningButton = Color(0xFFE0B27D);
+  static const eveningButtonText = Color(0xFF2B211B);
+  static const moonSage = Color(0xFFAAB7A2);
   static const espresso = brown;
 }
 
@@ -74,9 +77,9 @@ class RoutinePalette {
       text: AppColors.eveningText,
       muted: AppColors.eveningMuted,
       accent: AppColors.eveningAmber,
-      accentSoft: AppColors.brownSoft,
-      button: AppColors.brown,
-      buttonText: AppColors.buttonText,
+      accentSoft: AppColors.eveningAccentSoft,
+      button: AppColors.eveningButton,
+      buttonText: AppColors.eveningButtonText,
     );
   }
 

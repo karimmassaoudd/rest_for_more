@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 class RfmLogo extends StatelessWidget {
-  const RfmLogo({super.key, this.onTap});
+  const RfmLogo({super.key, required this.textColor, this.onTap});
 
+  final Color textColor;
   final VoidCallback? onTap;
 
   @override
@@ -28,10 +29,10 @@ class RfmLogo extends StatelessWidget {
                   child: CustomPaint(painter: _CrescentPainter()),
                 ),
                 const SizedBox(height: 1),
-                const Text(
+                Text(
                   'RFM',
                   style: TextStyle(
-                  color: Color(0xFF8A6449),
+                    color: textColor,
                     fontSize: 17,
                     height: 1,
                     fontWeight: FontWeight.w900,

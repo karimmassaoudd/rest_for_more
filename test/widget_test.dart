@@ -41,6 +41,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('header-evening')), findsOneWidget);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+      AppColors.eveningBackground,
+    );
     expect(find.text('I WANT TO SLEEP AT'), findsOneWidget);
     expect(find.text('10:30 PM'), findsOneWidget);
     expect(find.text('0/5'), findsOneWidget);

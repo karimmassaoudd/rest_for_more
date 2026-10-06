@@ -26,7 +26,7 @@ class GreetingHeader extends StatelessWidget {
       children: [
         Row(
           children: [
-            RfmLogo(onTap: onBack),
+            RfmLogo(textColor: palette.text, onTap: onBack),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
