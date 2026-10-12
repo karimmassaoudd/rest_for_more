@@ -10,11 +10,11 @@ class AppTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: AppColors.morningBackground,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: AppColors.sage,
+        seedColor: AppColors.brown,
         brightness: Brightness.light,
         surface: AppColors.morningBackground,
       ),
-      splashFactory: InkSparkle.splashFactory,
+      splashFactory: InkRipple.splashFactory,
       textTheme: const TextTheme(
         bodyLarge: TextStyle(
           fontFamily: 'sans-serif',

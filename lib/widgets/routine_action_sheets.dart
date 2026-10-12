@@ -88,7 +88,7 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
             ),
             const SizedBox(height: 22),
             Text(
-              'Add ${widget.period.name} routine',
+              'Add ${widget.period.name} step',
               style: TextStyle(
                 color: palette.text,
                 fontFamily: 'serif',
@@ -102,7 +102,7 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               style: TextStyle(color: palette.text),
-              decoration: _inputDecoration('Routine name', palette),
+              decoration: _inputDecoration('Step name', palette),
               validator: (value) => value == null || value.trim().isEmpty
                   ? 'Enter a routine name'
                   : null,
@@ -158,7 +158,7 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
                   backgroundColor: palette.button,
                   foregroundColor: palette.buttonText,
                 ),
-                child: const Text('Add to routine'),
+                child: const Text('Add step'),
               ),
             ),
           ],
