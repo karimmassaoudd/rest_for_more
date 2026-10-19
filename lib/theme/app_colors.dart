@@ -5,6 +5,11 @@ import '../models/routine_step.dart';
 class AppColors {
   const AppColors._();
 
+  static const lightbrown = Color(0xFF9F755C);
+  static const mediumbrown = Color(0xFF7B563D);
+  static const darkbrown = Color(0xFF4E3B31);
+  static const yellowhighlight = Color(0xFFFFB60A);
+
   static const background = Color(0xFFFAF8F3);
   static const surface = Color(0xFFF1EDE4);
   static const card = Color(0xFFEDE8DC);
@@ -94,3 +99,4 @@ class RoutinePalette {
   final Color button;
   final Color buttonText;
 }
+
