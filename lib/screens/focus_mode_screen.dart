@@ -192,7 +192,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Task finished',
+                              'Task completed',
                               style: TextStyle(
                                 color: widget.palette.text,
                                 fontWeight: FontWeight.w700,
@@ -229,7 +229,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                   onPressed: () => Navigator.pop(context, true),
                   icon: const Icon(Icons.check_rounded),
                   label: Text(
-                    timerFinished ? 'Complete task' : 'Complete this step',
+                    timerFinished ? 'Continue' : 'Complete this step',
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: widget.palette.button,
