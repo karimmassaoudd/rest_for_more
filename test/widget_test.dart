@@ -205,8 +205,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('00:00'), findsOneWidget);
-    expect(find.text('Task finished'), findsOneWidget);
-    expect(find.text('Complete task'), findsOneWidget);
+    expect(find.text('Task completed'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
     expect(find.text('Next task: Following task'), findsOneWidget);
   });
 
