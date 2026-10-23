@@ -12,6 +12,8 @@ class RoutineItemCard extends StatelessWidget {
     required this.period,
     required this.palette,
     required this.onToggle,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   final RoutineStep step;
@@ -20,6 +22,8 @@ class RoutineItemCard extends StatelessWidget {
   final RoutinePeriod period;
   final RoutinePalette palette;
   final VoidCallback onToggle;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   IconData _iconForStep() {
     final title = step.title.toLowerCase();
@@ -133,50 +137,100 @@ class RoutineItemCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (completed)
-                  Text(
-                    'Done',
-                    style: TextStyle(
-                      color: palette.accent,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                else
-                  PopupMenuButton<String>(
-                    key: Key('routine-menu-$index'),
-                    tooltip: 'Task options',
-                    padding: EdgeInsets.zero,
-                    color: palette.background,
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      color: palette.muted,
-                      size: 17,
-                    ),
-                    onSelected: (_) => onToggle(),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'complete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline_rounded,
-                              color: palette.accent,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Mark as complete',
-                              style: TextStyle(
-                                color: palette.text,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (completed)
+                      Text(
+                        'Done',
+                        style: TextStyle(
+                          color: palette.accent,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ],
-                  ),
+                    PopupMenuButton<String>(
+                      key: Key('routine-menu-$index'),
+                      tooltip: 'Task options',
+                      padding: EdgeInsets.zero,
+                      color: palette.background,
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        color: palette.muted,
+                        size: 17,
+                      ),
+                      onSelected: (value) {
+                        if (value == 'complete') onToggle();
+                        if (value == 'edit') onEdit();
+                        if (value == 'delete') onDelete();
+                      },
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: 'complete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline_rounded,
+                                color: palette.accent,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                completed
+                                    ? 'Mark as incomplete'
+                                    : 'Mark as complete',
+                                style: TextStyle(
+                                  color: palette.text,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_outlined,
+                                color: palette.accent,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Edit task',
+                                style: TextStyle(
+                                  color: palette.text,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Delete task',
+                                style: TextStyle(
+                                  color: palette.text,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

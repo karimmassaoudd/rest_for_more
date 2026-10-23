@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/routine_step.dart';
 import '../services/routine_progress_storage.dart';
+import '../services/routine_reminder_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/active_routine_card.dart';
 import '../widgets/bottom_action_dock.dart';
@@ -12,6 +13,8 @@ import '../widgets/routine_item_card.dart';
 import '../widgets/routine_action_sheets.dart';
 import '../widgets/routine_switcher.dart';
 import 'focus_mode_screen.dart';
+import 'reminder_settings_screen.dart';
+import 'routine_history_screen.dart';
 
 class RoutineScreen extends StatefulWidget {
   const RoutineScreen({
@@ -31,29 +34,34 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   List<RoutineStep> _morningSteps = const [
     RoutineStep(
+      id: 'morning-water',
       title: 'Cold Water & Electrolytes',
       time: '7:00 AM',
       duration: '5 min',
       isCompleted: true,
     ),
     RoutineStep(
+      id: 'morning-breathing',
       title: 'Box Breathing & Stretch',
       time: '7:05 AM',
       duration: '10 min',
       isCompleted: true,
     ),
     RoutineStep(
+      id: 'morning-shower',
       title: 'Sensory Shower',
       time: '7:15 AM',
       duration: '15 min',
       isCompleted: true,
     ),
     RoutineStep(
+      id: 'morning-journal',
       title: 'Matcha & Intention Journal',
       time: '7:30 AM',
       duration: '10 min',
     ),
     RoutineStep(
+      id: 'morning-priority',
       title: 'Daily Priority Alignment',
       time: '7:40 AM',
       duration: '5 min',
@@ -62,26 +70,31 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   List<RoutineStep> _eveningSteps = const [
     RoutineStep(
+      id: 'evening-screen',
       title: 'Screen Curfew & Phone Away',
       time: '9:40 PM',
       duration: '5 min',
     ),
     RoutineStep(
+      id: 'evening-tea',
       title: 'Herbal Chamomile & Tincture',
       time: '9:45 PM',
       duration: '10 min',
     ),
     RoutineStep(
+      id: 'evening-shower',
       title: 'Warm Shower & Skincare',
       time: '9:55 PM',
       duration: '15 min',
     ),
     RoutineStep(
+      id: 'evening-journal',
       title: 'Gratitude & Unload Journal',
       time: '10:10 PM',
       duration: '10 min',
     ),
     RoutineStep(
+      id: 'evening-breathing',
       title: 'Dim Lamps & 4-7-8 Breathing',
       time: '10:20 PM',
       duration: '5 min',
@@ -110,12 +123,18 @@ class _RoutineScreenState extends State<RoutineScreen> {
       final results = await Future.wait([
         widget.progressStorage.loadCompletedTasks(RoutinePeriod.morning),
         widget.progressStorage.loadCompletedTasks(RoutinePeriod.evening),
+        widget.progressStorage.loadSteps(RoutinePeriod.morning),
+        widget.progressStorage.loadSteps(RoutinePeriod.evening),
       ]);
       if (!mounted) return;
 
       setState(() {
-        _morningSteps = _applySavedProgress(_morningSteps, results[0]);
-        _eveningSteps = _applySavedProgress(_eveningSteps, results[1]);
+        _morningSteps =
+            (results[2] as List<RoutineStep>?) ??
+            _applySavedProgress(_morningSteps, results[0] as Set<String>?);
+        _eveningSteps =
+            (results[3] as List<RoutineStep>?) ??
+            _applySavedProgress(_eveningSteps, results[1] as Set<String>?);
       });
     } catch (_) {
       // Keep the in-memory defaults if local storage is unavailable.
@@ -141,6 +160,19 @@ class _RoutineScreenState extends State<RoutineScreen> {
         : _eveningSteps;
     try {
       await widget.progressStorage.saveCompletedTasks(period, steps);
+      await widget.progressStorage.saveSteps(period, steps);
+      await widget.progressStorage.saveToday(
+        morningSteps: _morningSteps,
+        eveningSteps: _eveningSteps,
+      );
+      await RoutineReminderService().refreshIfEnabled(
+        morningRemaining: _morningSteps
+            .where((step) => !step.isCompleted)
+            .length,
+        eveningRemaining: _eveningSteps
+            .where((step) => !step.isCompleted)
+            .length,
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -245,6 +277,70 @@ class _RoutineScreenState extends State<RoutineScreen> {
       }
     });
     unawaited(_saveProgress(period));
+  }
+
+  Future<void> _editStep(int index) async {
+    final period = _period;
+    final palette = RoutinePalette.forPeriod(period);
+    final updatedStep = await showModalBottomSheet<RoutineStep>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: palette.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => AddRoutineSheet(
+        period: period,
+        palette: palette,
+        initialStep: _steps[index],
+      ),
+    );
+    if (updatedStep == null || !mounted) return;
+    setState(() {
+      final updated = List<RoutineStep>.of(_steps)..[index] = updatedStep;
+      if (period == RoutinePeriod.morning) {
+        _morningSteps = updated;
+      } else {
+        _eveningSteps = updated;
+      }
+    });
+    await _saveProgress(period);
+  }
+
+  Future<void> _deleteStep(int index) async {
+    final period = _period;
+    setState(() {
+      final updated = List<RoutineStep>.of(_steps)..removeAt(index);
+      if (period == RoutinePeriod.morning) {
+        _morningSteps = updated;
+      } else {
+        _eveningSteps = updated;
+      }
+    });
+    await _saveProgress(period);
+  }
+
+  Future<void> _openHistory() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => RoutineHistoryScreen(storage: widget.progressStorage),
+      ),
+    );
+  }
+
+  Future<void> _openReminders() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ReminderSettingsScreen(
+          morningRemaining: _morningSteps
+              .where((step) => !step.isCompleted)
+              .length,
+          eveningRemaining: _eveningSteps
+              .where((step) => !step.isCompleted)
+              .length,
+        ),
+      ),
+    );
   }
 
   Future<void> _openSettings() async {
@@ -400,6 +496,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
                             period: _period,
                             palette: palette,
                             onToggle: () => _toggleStep(index),
+                            onEdit: () => _editStep(index),
+                            onDelete: () => _deleteStep(index),
                           ),
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 260),
@@ -412,6 +510,30 @@ class _RoutineScreenState extends State<RoutineScreen> {
                               : const SizedBox.shrink(),
                         ),
                         const SizedBox(height: 5),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton.icon(
+                            key: const Key('routine-history-button'),
+                            onPressed: _openHistory,
+                            icon: const Icon(Icons.calendar_month_outlined),
+                            label: const Text('History & progress'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: palette.accent,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton.icon(
+                            key: const Key('routine-reminders-button'),
+                            onPressed: _openReminders,
+                            icon: const Icon(Icons.notifications_outlined),
+                            label: const Text('Routine reminders'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: palette.accent,
+                            ),
+                          ),
+                        ),
                         SizedBox(
                           width: double.infinity,
                           height: 44,

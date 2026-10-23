@@ -8,10 +8,12 @@ class AddRoutineSheet extends StatefulWidget {
     super.key,
     required this.period,
     required this.palette,
+    this.initialStep,
   });
 
   final RoutinePeriod period;
   final RoutinePalette palette;
+  final RoutineStep? initialStep;
 
   @override
   State<AddRoutineSheet> createState() => _AddRoutineSheetState();
@@ -29,6 +31,16 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
     if (widget.period == RoutinePeriod.evening) {
       _time = const TimeOfDay(hour: 22, minute: 30);
     }
+    final initial = widget.initialStep;
+    if (initial != null) {
+      _titleController.text = initial.title;
+      _duration =
+          int.tryParse(
+            RegExp(r'\d+').firstMatch(initial.duration)?.group(0) ?? '',
+          ) ??
+          10;
+      _time = _parseTime(initial.time);
+    }
   }
 
   @override
@@ -43,6 +55,20 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
     return '$hour:$minute ${time.period == DayPeriod.am ? 'AM' : 'PM'}';
   }
 
+  TimeOfDay _parseTime(String value) {
+    final match = RegExp(
+      r'(\d+):(\d+)\s*(AM|PM)',
+      caseSensitive: false,
+    ).firstMatch(value);
+    if (match == null) return _time;
+    var hour = int.parse(match.group(1)!);
+    final minute = int.parse(match.group(2)!);
+    final afternoon = match.group(3)!.toUpperCase() == 'PM';
+    if (hour == 12) hour = 0;
+    if (afternoon) hour += 12;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
   Future<void> _pickTime() async {
     final selected = await showTimePicker(context: context, initialTime: _time);
     if (selected != null && mounted) setState(() => _time = selected);
@@ -53,6 +79,9 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
     Navigator.pop(
       context,
       RoutineStep(
+        id:
+            widget.initialStep?.id ??
+            DateTime.now().microsecondsSinceEpoch.toString(),
         title: _titleController.text.trim(),
         time: _formatTime(_time),
         duration: '$_duration min',
@@ -88,7 +117,9 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
             ),
             const SizedBox(height: 22),
             Text(
-              'Add ${widget.period.name} step',
+              widget.initialStep == null
+                  ? 'Add ${widget.period.name} step'
+                  : 'Edit ${widget.period.name} step',
               style: TextStyle(
                 color: palette.text,
                 fontFamily: 'serif',
@@ -158,7 +189,9 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
                   backgroundColor: palette.button,
                   foregroundColor: palette.buttonText,
                 ),
-                child: const Text('Add step'),
+                child: Text(
+                  widget.initialStep == null ? 'Add step' : 'Save changes',
+                ),
               ),
             ),
           ],
