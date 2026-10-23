@@ -217,5 +217,7 @@ void main() {
     expect(find.text('Add step'), findsOneWidget);
     expect(find.text('Start your morning'), findsOneWidget);
     expect(find.byKey(const Key('focus-mode-button')), findsOneWidget);
+    expect(find.byKey(const Key('save-all-button')), findsOneWidget);
+    expect(find.text('Save all changes'), findsOneWidget);
   });
 }

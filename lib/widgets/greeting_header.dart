@@ -11,12 +11,14 @@ class GreetingHeader extends StatelessWidget {
     required this.palette,
     required this.onBack,
     required this.onAction,
+    this.actionInProgress = false,
   });
 
   final RoutinePeriod period;
   final RoutinePalette palette;
   final VoidCallback onBack;
   final VoidCallback onAction;
+  final bool actionInProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -42,12 +44,23 @@ class GreetingHeader extends StatelessWidget {
             IconButton(
               visualDensity: VisualDensity.compact,
               tooltip: isMorning ? 'Refresh routine' : 'Routine settings',
-              onPressed: onAction,
-              icon: Icon(
-                isMorning ? Icons.refresh_rounded : Icons.more_vert_rounded,
-                color: palette.text,
-                size: 19,
-              ),
+              onPressed: actionInProgress ? null : onAction,
+              icon: actionInProgress
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: palette.accent,
+                      ),
+                    )
+                  : Icon(
+                      isMorning
+                          ? Icons.refresh_rounded
+                          : Icons.more_vert_rounded,
+                      color: palette.text,
+                      size: 19,
+                    ),
             ),
           ],
         ),

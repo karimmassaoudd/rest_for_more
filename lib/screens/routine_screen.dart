@@ -31,6 +31,8 @@ class RoutineScreen extends StatefulWidget {
 class _RoutineScreenState extends State<RoutineScreen> {
   RoutinePeriod _period = RoutinePeriod.morning;
   bool _autoAdvanceToEvening = true;
+  bool _isSaving = false;
+  bool _isRefreshing = false;
 
   List<RoutineStep> _morningSteps = const [
     RoutineStep(
@@ -252,7 +254,63 @@ class _RoutineScreenState extends State<RoutineScreen> {
   }
 
   Future<void> _refreshRoutine() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
     await _loadProgress();
+    if (!mounted) return;
+    setState(() => _isRefreshing = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Routine refreshed from saved data.')),
+    );
+  }
+
+  Future<void> _saveAll() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+    try {
+      await widget.progressStorage.saveCompletedTasks(
+        RoutinePeriod.morning,
+        _morningSteps,
+      );
+      await widget.progressStorage.saveCompletedTasks(
+        RoutinePeriod.evening,
+        _eveningSteps,
+      );
+      await widget.progressStorage.saveSteps(
+        RoutinePeriod.morning,
+        _morningSteps,
+      );
+      await widget.progressStorage.saveSteps(
+        RoutinePeriod.evening,
+        _eveningSteps,
+      );
+      await widget.progressStorage.saveToday(
+        morningSteps: _morningSteps,
+        eveningSteps: _eveningSteps,
+      );
+      await RoutineReminderService().refreshIfEnabled(
+        morningRemaining: _morningSteps
+            .where((step) => !step.isCompleted)
+            .length,
+        eveningRemaining: _eveningSteps
+            .where((step) => !step.isCompleted)
+            .length,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All routine changes saved.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save all routine changes.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   Future<void> _addStep() async {
@@ -464,6 +522,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                               unawaited(_openSettings());
                             }
                           },
+                          actionInProgress: _isRefreshing,
                         ),
                         const SizedBox(height: 16),
                         RoutineSwitcher(
@@ -476,6 +535,42 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           palette: palette,
                           onHistory: _openHistory,
                           onReminders: _openReminders,
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 44,
+                          child: FilledButton.icon(
+                            key: const Key('save-all-button'),
+                            onPressed: _isSaving ? null : _saveAll,
+                            icon: _isSaving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.cloud_done_outlined,
+                                    size: 17,
+                                  ),
+                            label: Text(
+                              _isSaving ? 'Saving...' : 'Save all changes',
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: palette.accent,
+                              foregroundColor: palette.buttonText,
+                              textStyle: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 14),
                         ActiveRoutineCard(
