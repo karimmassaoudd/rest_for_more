@@ -471,6 +471,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           palette: palette,
                           onChanged: _selectPeriod,
                         ),
+                        const SizedBox(height: 10),
+                        _RoutineTools(
+                          palette: palette,
+                          onHistory: _openHistory,
+                          onReminders: _openReminders,
+                        ),
                         const SizedBox(height: 14),
                         ActiveRoutineCard(
                           period: _period,
@@ -510,30 +516,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
                               : const SizedBox.shrink(),
                         ),
                         const SizedBox(height: 5),
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton.icon(
-                            key: const Key('routine-history-button'),
-                            onPressed: _openHistory,
-                            icon: const Icon(Icons.calendar_month_outlined),
-                            label: const Text('History & progress'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: palette.accent,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          child: TextButton.icon(
-                            key: const Key('routine-reminders-button'),
-                            onPressed: _openReminders,
-                            icon: const Icon(Icons.notifications_outlined),
-                            label: const Text('Routine reminders'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: palette.accent,
-                            ),
-                          ),
-                        ),
                         SizedBox(
                           width: double.infinity,
                           height: 44,
@@ -583,6 +565,87 @@ class _RoutineScreenState extends State<RoutineScreen> {
           ), // RefreshIndicator
         ), // SafeArea
       ), // AnimatedContainer
+    );
+  }
+}
+
+class _RoutineTools extends StatelessWidget {
+  const _RoutineTools({
+    required this.palette,
+    required this.onHistory,
+    required this.onReminders,
+  });
+
+  final RoutinePalette palette;
+  final VoidCallback onHistory;
+  final VoidCallback onReminders;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: palette.surface.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: palette.border.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ToolButton(
+              key: const Key('routine-history-button'),
+              icon: Icons.calendar_month_outlined,
+              label: 'History',
+              palette: palette,
+              onPressed: onHistory,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 24,
+            color: palette.border.withValues(alpha: 0.45),
+          ),
+          Expanded(
+            child: _ToolButton(
+              key: const Key('routine-reminders-button'),
+              icon: Icons.notifications_outlined,
+              label: 'Reminders',
+              palette: palette,
+              onPressed: onReminders,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.palette,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final RoutinePalette palette;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        foregroundColor: palette.accent,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
     );
   }
 }
