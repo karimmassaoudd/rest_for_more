@@ -59,7 +59,7 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
     return Scaffold(
       backgroundColor: palette.background,
       appBar: AppBar(
-        title: const Text('Routine history'),
+        title: const Text('Routine calendar'),
         backgroundColor: palette.background,
         foregroundColor: palette.text,
       ),
@@ -232,6 +232,40 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
                 rangeDays: _rangeDays,
                 filter: _filter,
                 palette: palette,
+              ),
+              const SizedBox(height: 22),
+              _SectionCard(
+                palette: palette,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.smartphone_outlined, color: palette.accent),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Where your data is stored',
+                            style: TextStyle(
+                              color: palette.text,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            'Routine tasks, completed steps and calendar progress are stored locally on this device. Nothing is uploaded to a server. Uninstalling the app removes this local data.',
+                            style: TextStyle(
+                              color: palette.muted,
+                              fontSize: 11.5,
+                              height: 1.45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           );

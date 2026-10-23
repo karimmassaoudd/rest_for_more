@@ -595,7 +595,7 @@ class _RoutineTools extends StatelessWidget {
             child: _ToolButton(
               key: const Key('routine-history-button'),
               icon: Icons.calendar_month_outlined,
-              label: 'History',
+              label: 'Calendar',
               palette: palette,
               onPressed: onHistory,
             ),
