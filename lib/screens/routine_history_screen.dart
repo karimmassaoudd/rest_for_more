@@ -340,8 +340,9 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
                             ),
                           ],
                           onChanged: (value) {
-                            if (value != null)
+                            if (value != null) {
                               setState(() => _rangeDays = value);
+                            }
                           },
                         ),
                       ],
@@ -855,41 +856,4 @@ class _ProgressDot extends StatelessWidget {
       shape: BoxShape.circle,
     ),
   );
-}
-
-class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({
-    required this.label,
-    required this.completed,
-    required this.total,
-    required this.color,
-  });
-  final String label;
-  final int completed;
-  final int total;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = total == 0 ? 0.0 : completed / total;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label),
-            Text('$completed/$total  ${(progress * 100).round()}%'),
-          ],
-        ),
-        const SizedBox(height: 6),
-        LinearProgressIndicator(
-          value: progress,
-          minHeight: 12,
-          color: color,
-          borderRadius: BorderRadius.circular(99),
-        ),
-      ],
-    );
-  }
 }
