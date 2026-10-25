@@ -135,6 +135,19 @@ class RoutineProgressStorage {
     }
   }
 
+  Future<void> saveDay(RoutineDayRecord record) async {
+    final records = await loadHistory();
+    records.removeWhere((item) => item.date == record.date);
+    records.add(record);
+    records.sort((a, b) => a.date.compareTo(b.date));
+    await _saveHistoryLocally(records);
+    try {
+      await cloudStorage.saveDay(record);
+    } catch (_) {
+      // The record remains available locally when cloud sync is unavailable.
+    }
+  }
+
   Future<void> _saveHistoryLocally(List<RoutineDayRecord> records) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(

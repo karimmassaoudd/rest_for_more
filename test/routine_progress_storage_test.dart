@@ -71,4 +71,29 @@ void main() {
     expect(record.morningTotal, 2);
     expect(record.eveningProgress, 1);
   });
+
+  test('calendar day can be edited and saved', () async {
+    const original = RoutineDayRecord(
+      date: '2026-10-24',
+      morningCompleted: 1,
+      morningTotal: 3,
+      eveningCompleted: 0,
+      eveningTotal: 2,
+    );
+    const updated = RoutineDayRecord(
+      date: '2026-10-24',
+      morningCompleted: 2,
+      morningTotal: 3,
+      eveningCompleted: 1,
+      eveningTotal: 2,
+    );
+
+    await storage.saveDay(original);
+    await storage.saveDay(updated);
+
+    final records = await storage.loadHistory();
+    expect(records, hasLength(1));
+    expect(records.single.morningCompleted, 2);
+    expect(records.single.eveningCompleted, 1);
+  });
 }
