@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/routine_step.dart';
 import '../services/routine_progress_storage.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_theme.dart';
 
 enum _HistoryFilter { both, morning, evening }
 
@@ -24,6 +25,7 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
   int _rangeDays = 7;
   RoutineDayRecord? _draft;
   bool _isSaving = false;
+  RoutinePeriod _appearance = RoutinePeriod.morning;
 
   @override
   void initState() {
@@ -101,254 +103,299 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = RoutinePalette.forPeriod(RoutinePeriod.morning);
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: const Text('Routine calendar'),
+    final palette = RoutinePalette.forPeriod(_appearance);
+    final isDark = _appearance == RoutinePeriod.evening;
+    return Theme(
+      data: isDark ? AppTheme.dark : AppTheme.light,
+      child: Scaffold(
         backgroundColor: palette.background,
-        foregroundColor: palette.text,
-      ),
-      body: FutureBuilder<List<RoutineDayRecord>>(
-        future: _history,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final records = snapshot.data!;
-          final byDate = {for (final record in records) record.date: record};
-          final selected = byDate[_selectedDate];
-          return FutureBuilder<List<List<RoutineStep>?>>(
-            future: _routineSteps,
-            builder: (context, stepsSnapshot) {
-              final morningTotal =
-                  stepsSnapshot.data?[0]?.length ?? selected?.morningTotal ?? 0;
-              final eveningTotal =
-                  stepsSnapshot.data?[1]?.length ?? selected?.eveningTotal ?? 0;
-              final editable = _recordFor(selected, morningTotal, eveningTotal);
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
-                children: [
-                  Text(
-                    'Tap a date, adjust its completed tasks, then press Save.',
-                    style: TextStyle(color: palette.muted, height: 1.4),
-                  ),
-                  const SizedBox(height: 12),
-                  _SectionCard(
-                    palette: palette,
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            IconButton(
-                              key: const Key('previous-history-month'),
-                              tooltip: 'Previous month',
-                              onPressed: () => _changeMonth(-1),
-                              icon: const Icon(Icons.chevron_left_rounded),
-                            ),
-                            Expanded(
-                              child: Text(
-                                '${_monthName(_visibleMonth.month)} ${_visibleMonth.year}',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: palette.text,
-                                  fontFamily: 'serif',
-                                  fontSize: 23,
-                                ),
+        appBar: AppBar(
+          title: const Text(
+            'Routine calendar',
+            style: TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: palette.background,
+          foregroundColor: palette.text,
+          surfaceTintColor: Colors.transparent,
+          actions: [
+            IconButton(
+              key: const Key('calendar-theme-toggle'),
+              tooltip: isDark ? 'Use light mode' : 'Use dark mode',
+              onPressed: () => setState(() {
+                _appearance = isDark
+                    ? RoutinePeriod.morning
+                    : RoutinePeriod.evening;
+              }),
+              icon: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: FutureBuilder<List<RoutineDayRecord>>(
+          future: _history,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final records = snapshot.data!;
+            final byDate = {for (final record in records) record.date: record};
+            final selected = byDate[_selectedDate];
+            return FutureBuilder<List<List<RoutineStep>?>>(
+              future: _routineSteps,
+              builder: (context, stepsSnapshot) {
+                final morningTotal =
+                    stepsSnapshot.data?[0]?.length ??
+                    selected?.morningTotal ??
+                    0;
+                final eveningTotal =
+                    stepsSnapshot.data?[1]?.length ??
+                    selected?.eveningTotal ??
+                    0;
+                final editable = _recordFor(
+                  selected,
+                  morningTotal,
+                  eveningTotal,
+                );
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                  children: [
+                    Text(
+                      'Tap a date, adjust its completed tasks, then press Save.',
+                      style: TextStyle(color: palette.muted, height: 1.4),
+                    ),
+                    const SizedBox(height: 12),
+                    _SectionCard(
+                      palette: palette,
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                key: const Key('previous-history-month'),
+                                tooltip: 'Previous month',
+                                onPressed: () => _changeMonth(-1),
+                                icon: const Icon(Icons.chevron_left_rounded),
                               ),
-                            ),
-                            IconButton(
-                              key: const Key('next-history-month'),
-                              tooltip: 'Next month',
-                              onPressed: () => _changeMonth(1),
-                              icon: const Icon(Icons.chevron_right_rounded),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: const ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-                              .map(
-                                (day) => Expanded(
-                                  child: Text(
-                                    day,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                              Expanded(
+                                child: Text(
+                                  '${_monthName(_visibleMonth.month)} ${_visibleMonth.year}',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: palette.text,
+                                    fontFamily: 'serif',
+                                    fontSize: 23,
                                   ),
                                 ),
-                              )
-                              .toList(),
-                        ),
-                        const SizedBox(height: 6),
-                        _CalendarGrid(
-                          month: _visibleMonth,
-                          selectedDate: _selectedDate,
-                          records: byDate,
-                          palette: palette,
-                          dateKey: _key,
-                          onSelected: (date) {
-                            setState(() {
-                              _selectedDate = date;
-                              _draft = null;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _LegendDot(color: const Color(0xFFD69A2D)),
-                            const SizedBox(width: 5),
-                            Text(
-                              'Morning',
-                              style: TextStyle(
-                                color: palette.muted,
-                                fontSize: 10,
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            _LegendDot(color: const Color(0xFF7267A8)),
-                            const SizedBox(width: 5),
-                            Text(
-                              'Evening',
-                              style: TextStyle(
-                                color: palette.muted,
-                                fontSize: 10,
+                              IconButton(
+                                key: const Key('next-history-month'),
+                                tooltip: 'Next month',
+                                onPressed: () => _changeMonth(1),
+                                icon: const Icon(Icons.chevron_right_rounded),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Show progress for',
-                    style: TextStyle(
-                      color: palette.text,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 9),
-                  SegmentedButton<_HistoryFilter>(
-                    key: const Key('history-period-filter'),
-                    segments: const [
-                      ButtonSegment(
-                        value: _HistoryFilter.both,
-                        label: Text('Both'),
-                      ),
-                      ButtonSegment(
-                        value: _HistoryFilter.morning,
-                        label: Text('Morning'),
-                      ),
-                      ButtonSegment(
-                        value: _HistoryFilter.evening,
-                        label: Text('Evening'),
-                      ),
-                    ],
-                    selected: {_filter},
-                    onSelectionChanged: (value) {
-                      setState(() => _filter = value.first);
-                    },
-                    style: ButtonStyle(
-                      visualDensity: VisualDensity.compact,
-                      foregroundColor: WidgetStatePropertyAll(palette.text),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _SelectedDayCard(
-                    date: _selectedDate,
-                    record: editable,
-                    filter: _filter,
-                    palette: palette,
-                    onReturnToRoutine: () => Navigator.pop(context),
-                    isSaving: _isSaving,
-                    onChanged: (record) => setState(() => _draft = record),
-                    onSave: () => _saveSelectedDay(editable),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Progress over time',
-                          style: TextStyle(
-                            color: palette.text,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            ],
                           ),
-                        ),
-                      ),
-                      DropdownButton<int>(
-                        key: const Key('history-range-filter'),
-                        value: _rangeDays,
-                        dropdownColor: palette.card,
-                        items: const [
-                          DropdownMenuItem(
-                            value: 7,
-                            child: Text('Last 7 days'),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: const ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                                .map(
+                                  (day) => Expanded(
+                                    child: Text(
+                                      day,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
                           ),
-                          DropdownMenuItem(
-                            value: 30,
-                            child: Text('Last 30 days'),
+                          const SizedBox(height: 6),
+                          _CalendarGrid(
+                            month: _visibleMonth,
+                            selectedDate: _selectedDate,
+                            records: byDate,
+                            palette: palette,
+                            dateKey: _key,
+                            onSelected: (date) {
+                              setState(() {
+                                _selectedDate = date;
+                                _draft = null;
+                              });
+                            },
                           ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) setState(() => _rangeDays = value);
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _HistoryList(
-                    records: records,
-                    rangeDays: _rangeDays,
-                    filter: _filter,
-                    palette: palette,
-                  ),
-                  const SizedBox(height: 22),
-                  _SectionCard(
-                    palette: palette,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.smartphone_outlined, color: palette.accent),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
+                              _LegendDot(color: const Color(0xFFD69A2D)),
+                              const SizedBox(width: 5),
                               Text(
-                                'Where your data is stored',
-                                style: TextStyle(
-                                  color: palette.text,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Routine tasks and calendar progress are saved on this device first. When Firebase is available, they are also synced securely to your account.',
+                                'Morning',
                                 style: TextStyle(
                                   color: palette.muted,
-                                  fontSize: 11.5,
-                                  height: 1.45,
+                                  fontSize: 10,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              _LegendDot(color: const Color(0xFF7267A8)),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Evening',
+                                style: TextStyle(
+                                  color: palette.muted,
+                                  fontSize: 10,
                                 ),
                               ),
                             ],
                           ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      'Show progress for',
+                      style: TextStyle(
+                        color: palette.text,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    SegmentedButton<_HistoryFilter>(
+                      key: const Key('history-period-filter'),
+                      segments: const [
+                        ButtonSegment(
+                          value: _HistoryFilter.both,
+                          label: Text('Both'),
+                        ),
+                        ButtonSegment(
+                          value: _HistoryFilter.morning,
+                          label: Text('Morning'),
+                        ),
+                        ButtonSegment(
+                          value: _HistoryFilter.evening,
+                          label: Text('Evening'),
+                        ),
+                      ],
+                      selected: {_filter},
+                      onSelectionChanged: (value) {
+                        setState(() => _filter = value.first);
+                      },
+                      style: ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        foregroundColor: WidgetStatePropertyAll(palette.text),
+                        backgroundColor: WidgetStateProperty.resolveWith(
+                          (states) => states.contains(WidgetState.selected)
+                              ? palette.accentSoft
+                              : palette.surface,
+                        ),
+                        side: WidgetStatePropertyAll(
+                          BorderSide(color: palette.border),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _SelectedDayCard(
+                      date: _selectedDate,
+                      record: editable,
+                      filter: _filter,
+                      palette: palette,
+                      onReturnToRoutine: () => Navigator.pop(context),
+                      isSaving: _isSaving,
+                      onChanged: (record) => setState(() => _draft = record),
+                      onSave: () => _saveSelectedDay(editable),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Progress over time',
+                            style: TextStyle(
+                              color: palette.text,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        DropdownButton<int>(
+                          key: const Key('history-range-filter'),
+                          value: _rangeDays,
+                          dropdownColor: palette.card,
+                          style: TextStyle(color: palette.text, fontSize: 13),
+                          iconEnabledColor: palette.accent,
+                          items: const [
+                            DropdownMenuItem(
+                              value: 7,
+                              child: Text('Last 7 days'),
+                            ),
+                            DropdownMenuItem(
+                              value: 30,
+                              child: Text('Last 30 days'),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null)
+                              setState(() => _rangeDays = value);
+                          },
                         ),
                       ],
                     ),
-                  ),
-                ],
-              );
-            },
-          );
-        },
+                    const SizedBox(height: 8),
+                    _HistoryList(
+                      records: records,
+                      rangeDays: _rangeDays,
+                      filter: _filter,
+                      palette: palette,
+                    ),
+                    const SizedBox(height: 22),
+                    _SectionCard(
+                      palette: palette,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.smartphone_outlined,
+                            color: palette.accent,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Where your data is stored',
+                                  style: TextStyle(
+                                    color: palette.text,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  'Routine tasks and calendar progress are saved on this device first. When Firebase is available, they are also synced securely to your account.',
+                                  style: TextStyle(
+                                    color: palette.muted,
+                                    fontSize: 11.5,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -405,44 +452,58 @@ class _CalendarGrid extends StatelessWidget {
         final key = dateKey(DateTime(month.year, month.month, day));
         final record = records[key];
         final selected = selectedDate == key;
-        return InkWell(
-          key: Key('history-day-$key'),
-          onTap: () => onSelected(key),
-          borderRadius: BorderRadius.circular(9),
-          child: Container(
-            decoration: BoxDecoration(
-              color: selected ? palette.accent : palette.card,
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: palette.border),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '$day',
-                  style: TextStyle(
-                    color: selected ? palette.buttonText : palette.text,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  ),
+        final now = DateTime.now();
+        final isToday =
+            now.year == month.year &&
+            now.month == month.month &&
+            now.day == day;
+        return Semantics(
+          label: '$key${isToday ? ', today' : ''}',
+          button: true,
+          selected: selected,
+          child: InkWell(
+            key: Key('history-day-$key'),
+            onTap: () => onSelected(key),
+            borderRadius: BorderRadius.circular(9),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              decoration: BoxDecoration(
+                color: selected ? palette.button : palette.surface,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(
+                  color: isToday && !selected ? palette.accent : palette.border,
+                  width: isToday && !selected ? 1.5 : 1,
                 ),
-                if (record != null) ...[
-                  const SizedBox(height: 3),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _ProgressDot(
-                        progress: record.morningProgress,
-                        color: const Color(0xFFD69A2D),
-                      ),
-                      const SizedBox(width: 3),
-                      _ProgressDot(
-                        progress: record.eveningProgress,
-                        color: const Color(0xFF7267A8),
-                      ),
-                    ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$day',
+                    style: TextStyle(
+                      color: selected ? palette.buttonText : palette.text,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
+                  if (record != null) ...[
+                    const SizedBox(height: 3),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _ProgressDot(
+                          progress: record.morningProgress,
+                          color: const Color(0xFFD69A2D),
+                        ),
+                        const SizedBox(width: 3),
+                        _ProgressDot(
+                          progress: record.eveningProgress,
+                          color: const Color(0xFF7267A8),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
@@ -561,6 +622,14 @@ class _SelectedDayCard extends StatelessWidget {
                       )
                     : const Icon(Icons.save_outlined),
                 label: Text(isSaving ? 'Saving...' : 'Save day'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: palette.button,
+                  foregroundColor: palette.buttonText,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
               ),
             ),
           ],
@@ -743,11 +812,18 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: palette.surface.withValues(alpha: 0.55),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: palette.border.withValues(alpha: 0.55)),
+      color: palette.card,
+      borderRadius: BorderRadius.circular(15),
+      border: Border.all(color: palette.border.withValues(alpha: 0.35)),
+      boxShadow: [
+        BoxShadow(
+          color: palette.text.withValues(alpha: 0.055),
+          blurRadius: 24,
+          offset: const Offset(0, 10),
+        ),
+      ],
     ),
     child: child,
   );

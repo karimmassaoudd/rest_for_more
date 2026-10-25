@@ -22,7 +22,9 @@ class RestForMeApp extends StatelessWidget {
     return MaterialApp(
       title: 'Rest For Me',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.base,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       home: const RoutineScreen(),
     );
   }
