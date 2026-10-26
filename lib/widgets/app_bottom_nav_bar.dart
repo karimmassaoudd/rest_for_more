@@ -74,6 +74,7 @@ class AppBottomNavBar extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
           margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: selected ? AppColors.mediumbrown : Colors.transparent,
             borderRadius: BorderRadius.circular(22),

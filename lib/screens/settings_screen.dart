@@ -38,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
                     ..showSnackBar(
                       const SnackBar(
                         content: Text(
-                          "Profiles can't be edited during a session.",
+                          "Profiles can't be edited during a session. End the session first.",
                         ),
                       ),
                     );
@@ -47,6 +47,12 @@ class SettingsScreen extends StatelessWidget {
                 if (!context.mounted) return;
                 context.push('/settings/focus-profiles');
               },
+            ),
+            SettingsTile(
+              icon: Icons.nights_stay_outlined,
+              title: 'Edit routines',
+              subtitle: 'Set your bedtime and evening steps',
+              onTap: () => context.push('/settings/routines'),
             ),
           ],
         ),

@@ -6,30 +6,6 @@ import 'package:flutter/services.dart';
 import '../data/save_activities.dart';
 import '../models/activity.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: _Design.background,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _Design.accent,
-          brightness: Brightness.light,
-        ),
-        fontFamily: 'Arial',
-      ),
-      home: const EveningPage(),
-    );
-  }
-}
-
 class _Design {
   static const background = Color(0xFFF9F8F5);
   static const surface = Color(0xFFEDE8DC);
@@ -266,7 +242,10 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.arrow_back, size: 19, color: _Design.ink),
+        IconButton(
+          icon: const Icon(Icons.arrow_back, size: 19, color: _Design.ink),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
         const SizedBox(width: 25),
         const Text(
           'Avond',
@@ -319,12 +298,11 @@ class _SleepSummary extends StatelessWidget {
                   letterSpacing: 1.4,
                 ),
               ),
-              
             ],
           ),
           const SizedBox(height: 8),
           Row(
-            children: [  
+            children: [
               const SizedBox(width: 20),
               Text(
                 sleepTime,
@@ -333,11 +311,10 @@ class _SleepSummary extends StatelessWidget {
                   fontFamily: 'Georgia',
                   fontSize: 34,
                   fontStyle: FontStyle.italic,
-              
                 ),
               ),
-             const Spacer(), 
-             IconButton(
+              const Spacer(),
+              IconButton(
                 onPressed: onTap,
                 tooltip: 'Bedtijd aanpassen',
                 icon: const Icon(Icons.edit_outlined, size: 25),
@@ -353,8 +330,8 @@ class _SleepSummary extends StatelessWidget {
               const SizedBox(width: 20),
             ],
           ),
+
           // const SizedBox(width: 16),
-          
         ],
       ),
     );

@@ -10,23 +10,24 @@ import '../widgets/bottom_action_dock.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/routine_item_card.dart';
 import '../widgets/routine_action_sheets.dart';
-import '../widgets/routine_switcher.dart';
 import 'focus_mode_screen.dart';
 
 class RoutineScreen extends StatefulWidget {
   const RoutineScreen({
     super.key,
+    this.initialPeriod = RoutinePeriod.morning,
     this.progressStorage = const RoutineProgressStorage(),
   });
 
   final RoutineProgressStorage progressStorage;
+  final RoutinePeriod initialPeriod;
 
   @override
   State<RoutineScreen> createState() => _RoutineScreenState();
 }
 
 class _RoutineScreenState extends State<RoutineScreen> {
-  RoutinePeriod _period = RoutinePeriod.morning;
+  late RoutinePeriod _period;
   bool _autoAdvanceToEvening = true;
 
   List<RoutineStep> _morningSteps = const [
@@ -102,6 +103,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
   @override
   void initState() {
     super.initState();
+    _period = widget.initialPeriod;
     unawaited(_loadProgress());
   }
 
@@ -149,14 +151,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
     }
   }
 
-  void _selectPeriod(RoutinePeriod period) {
-    if (_period == period) return;
-    setState(() => _period = period);
-  }
-
   void _toggleStep(int index) {
     final period = _period;
-    final wasCompleted = _steps[index].isCompleted;
     setState(() {
       final source = _period == RoutinePeriod.morning
           ? _morningSteps
@@ -173,8 +169,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
     });
 
     unawaited(_saveProgress(period));
-
-    if (!wasCompleted) _scheduleEveningTransition();
   }
 
   void _completeStep(int index, RoutinePeriod period) {
@@ -194,29 +188,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
       }
     });
     unawaited(_saveProgress(period));
-    _scheduleEveningTransition();
-  }
-
-  void _scheduleEveningTransition() {
-    if (!_autoAdvanceToEvening ||
-        _period != RoutinePeriod.morning ||
-        _morningSteps.any((step) => !step.isCompleted)) {
-      return;
-    }
-
-    Future<void>.delayed(const Duration(milliseconds: 850), () {
-      if (!mounted ||
-          _period != RoutinePeriod.morning ||
-          _morningSteps.any((step) => !step.isCompleted)) {
-        return;
-      }
-      setState(() => _period = RoutinePeriod.evening);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Morning complete — your Evening routine is ready.'),
-        ),
-      );
-    });
   }
 
   Future<void> _refreshRoutine() async {
@@ -277,7 +248,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
           _eveningSteps = resetSteps;
         }
       }
-      if (result.switchToEvening) _period = RoutinePeriod.evening;
     });
     if (result.resetProgress) unawaited(_saveProgress(period));
   }
@@ -286,13 +256,15 @@ class _RoutineScreenState extends State<RoutineScreen> {
     final period = _period;
     final index = _steps.indexWhere((step) => !step.isCompleted);
     if (index == -1) {
-      if (period == RoutinePeriod.morning) {
-        setState(() => _period = RoutinePeriod.evening);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Your evening routine is complete.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            period == RoutinePeriod.morning
+                ? 'Your morning routine is complete.'
+                : 'Your evening routine is complete.',
+          ),
+        ),
+      );
       return;
     }
 
@@ -354,13 +326,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                         GreetingHeader(
                           period: _period,
                           palette: palette,
-                          onBack: () {
-                            if (_period == RoutinePeriod.evening) {
-                              _selectPeriod(RoutinePeriod.morning);
-                            } else {
-                              Navigator.maybePop(context);
-                            }
-                          },
+                          onBack: () => Navigator.maybePop(context),
                           onAction: () {
                             if (_period == RoutinePeriod.morning) {
                               unawaited(_refreshRoutine());
@@ -370,12 +336,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        RoutineSwitcher(
-                          selected: _period,
-                          palette: palette,
-                          onChanged: _selectPeriod,
-                        ),
-                        const SizedBox(height: 14),
                         ActiveRoutineCard(
                           period: _period,
                           palette: palette,
