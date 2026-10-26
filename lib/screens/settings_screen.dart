@@ -28,8 +28,8 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 24),
             SettingsTile(
               icon: Icons.layers_outlined,
-              title: 'Focus profiles',
-              subtitle: 'Create, rename and edit your profiles',
+              title: 'Edit profiles',
+              subtitle: 'Create, rename and edit your focus profiles',
               onTap: () async {
                 if (await SessionStore().isActive()) {
                   if (!context.mounted) return;
@@ -51,7 +51,7 @@ class SettingsScreen extends StatelessWidget {
             SettingsTile(
               icon: Icons.nights_stay_outlined,
               title: 'Edit routines',
-              subtitle: 'Set your bedtime and evening steps',
+              subtitle: 'Manage your morning and evening routines',
               onTap: () => context.push('/settings/routines'),
             ),
           ],

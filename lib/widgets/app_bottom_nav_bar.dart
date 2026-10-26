@@ -10,7 +10,7 @@ class AppNavItem {
 
 /// The four tabs, in order.
 const List<AppNavItem> kAppNavItems = [
-  AppNavItem(icon: Icons.wb_sunny_outlined, label: 'Today'),
+  AppNavItem(icon: Icons.home_outlined, label: 'Today'),
   AppNavItem(icon: Icons.auto_graph, label: 'Progress'),
   AppNavItem(icon: Icons.tune, label: 'Settings'),
   AppNavItem(icon: Icons.person_outline, label: 'Profile'),
