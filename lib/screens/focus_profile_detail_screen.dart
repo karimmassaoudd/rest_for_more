@@ -10,6 +10,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_fonts.dart';
 import '../widgets/confirm_dialog.dart';
 import '../services/profile_events.dart';
+import '../services/session_store.dart';
 
 import 'package:go_router/go_router.dart';
 
@@ -83,7 +84,25 @@ class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
     });
   }
 
+  Future<bool> _editingAllowed() async {
+    if (!await SessionStore().isActive()) return true;
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Profiles can't be edited during a session. End the session first.",
+            ),
+          ),
+        );
+    }
+    return false;
+  }
+
   Future<void> _renameProfile() async {
+    if (!await _editingAllowed()) return;
+
     final meta = metaFor(currentProfile.id);
 
     if (meta.isCore) {
@@ -130,6 +149,8 @@ class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
   }
 
   Future<void> _deleteProfile() async {
+    if (!await _editingAllowed()) return;
+
     final meta = metaFor(currentProfile.id);
 
     if (meta.isCore) {
@@ -226,6 +247,8 @@ class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
               ),
               TextButton(
                 onPressed: () async {
+                  if (!await _editingAllowed()) return;
+                  if (!context.mounted) return;
                   final changed = await context.push<bool>(
                     '/settings/focus-profiles/detail/blocked-apps',
                     extra: currentProfile,
@@ -260,6 +283,8 @@ class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
               ),
               TextButton(
                 onPressed: () async {
+                  if (!await _editingAllowed()) return;
+                  if (!context.mounted) return;
                   final changed = await context.push<bool>(
                     '/settings/focus-profiles/detail/always-available',
                     extra: currentProfile,
