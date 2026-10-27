@@ -224,6 +224,7 @@ class TimerNotificationService {
       await _endLiveActivity(); // makes sure the old text is replaced
       await LiveActivity.show(
         id: _activityId,
+        deepLink: 'restformore://open-active-timer',
         compact: LA.row([
           LA.symbol('timer', size: 18, color: AppColors.mediumbrown),
           LA.countdown(
