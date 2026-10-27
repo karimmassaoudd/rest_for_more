@@ -43,7 +43,7 @@ class AppColors {
   static const moonSage = Color(0xFFAAB7A2);
   static const espresso = brown;
 }
-
+//this color palette is giving a lot of headages in git
 class RoutinePalette {
   const RoutinePalette({
     required this.background,
