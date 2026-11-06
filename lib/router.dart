@@ -12,6 +12,9 @@ import './screens/focus_profile_detail_screen.dart';
 import './screens/edit_blocked_apps_screen.dart';
 import './screens/edit_always_available_apps_screen.dart';
 import './screens/custom_time_screen.dart';
+import './screens/routine_screen.dart';
+import './screens/routine_editor.dart';
+import './models/routine_step.dart';
 
 import 'package:flutter/widgets.dart';
 
@@ -62,6 +65,23 @@ final GoRouter router = GoRouter(
       builder: (context, state) => CustomTimePage(
         customPresets: (state.extra as List?)?.cast<int>() ?? const <int>[],
       ),
+    ),
+    GoRoute(
+      path: '/routine/morning',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) =>
+          const RoutineScreen(initialPeriod: RoutinePeriod.morning),
+    ),
+    GoRoute(
+      path: '/routine/evening',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) =>
+          const RoutineScreen(initialPeriod: RoutinePeriod.evening),
+    ),
+    GoRoute(
+      path: '/settings/routines',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) => const EveningPage(),
     ),
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) =>

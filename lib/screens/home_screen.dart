@@ -9,6 +9,7 @@ import '../theme/app_fonts.dart';
 import '../services/blocking_service.dart';
 import '../services/session_store.dart';
 import '../services/timer_notification_service.dart';
+import '../widgets/permission_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<BlockProfile> profiles = [];
   final _session = SessionStore();
   bool _timerOpen = false;
+  bool _permissionMissing = false;
 
   @override
   void initState() {
@@ -40,7 +42,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _openRunningSession();
+    if (state == AppLifecycleState.resumed) {
+      _openRunningSession();
+      _refreshPermission();
+    }
   }
 
   /// The profile of the running session, or null if none is running.
@@ -58,7 +63,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _openTimer(BlockProfile profile) async {
     if (_timerOpen) return;
     _timerOpen = true;
-    final target = await _runningProfile() ?? profile;
+    final running = await _runningProfile();
+    if (running != null && running.id != profile.id && mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              '${running.name} is already running. End it to start another.',
+            ),
+          ),
+        );
+    }
+    final target = running ?? profile;
+
     if (!mounted) {
       _timerOpen = false;
       return;
@@ -80,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!mounted) return;
     if (await _openRunningSession()) return;
     await _checkPermissions();
+    _refreshPermission();
   }
 
   /// Asks for missing permissions when the app opens.
@@ -102,6 +121,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _refreshPermission() async {
+    try {
+      final status = await blocker.checkPermission();
+      if (!mounted) return;
+      setState(
+        () => _permissionMissing = status != BlockerPermissionStatus.granted,
+      );
+    } catch (error) {
+      debugPrint('Checking permission failed: $error');
+    }
+  }
+
+  Future<void> _fixPermission() async {
+    await BlockingService().ensurePermission(context);
+    await _refreshPermission();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,6 +145,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
           children: [
+            if (_permissionMissing) PermissionBanner(onTap: _fixPermission),
             Text(
               'What do you want to focus on?',
               style: AppFonts.cormorant(size: 28, weight: FontWeight.w600),
@@ -119,12 +156,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               style: AppFonts.cormorant(size: 15, color: AppColors.lightbrown),
             ),
             const SizedBox(height: 24),
+
             for (final profile in profiles) _buildProfileCard(profile),
           ],
         ),
       ),
     );
   }
+
+  void _onProfileTap(BlockProfile profile) {
+    switch (profile.id) {
+      case 'morning':
+        context.push('/routine/morning');
+      case 'evening':
+        context.push('/routine/evening');
+      default:
+        _openTimer(profile);
+    }
+  }
+
+  String _subtitleFor(BlockProfile profile) => switch (profile.id) {
+    'morning' => 'Morning routine',
+    'evening' => 'Evening routine',
+    _ => '${profile.appIdentifiers.length} apps blocked',
+  };
 
   Widget _buildProfileCard(BlockProfile profile) {
     final meta = metaFor(profile.id);
@@ -136,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => _openTimer(profile),
+          onTap: () => _onProfileTap(profile),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -155,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ),
                       Text(
-                        '${profile.appIdentifiers.length} apps blocked',
+                        _subtitleFor(profile),
                         style: AppFonts.manrope(
                           size: 13,
                           color: AppColors.lightbrown,
