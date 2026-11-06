@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/routine_step.dart';
 /// Branding colors for the whole application
 class AppColors {
   static const background = Color(0xFFFAF8F4);
@@ -39,4 +40,59 @@ class AppColors {
   static const eveningButtonText = Color(0xFF2B211B);
   static const moonSage = Color(0xFFAAB7A2);
   static const espresso = brown;
+}
+class RoutinePalette {
+  const RoutinePalette({
+    required this.background,
+    required this.surface,
+    required this.card,
+    required this.border,
+    required this.text,
+    required this.muted,
+    required this.accent,
+    required this.accentSoft,
+    required this.button,
+    required this.buttonText,
+  });
+
+  factory RoutinePalette.forPeriod(RoutinePeriod period) {
+    if (period == RoutinePeriod.morning) {
+      return const RoutinePalette(
+        background: AppColors.morningBackground,
+        surface: AppColors.surface,
+        card: AppColors.morningCard,
+        border: AppColors.morningBorder,
+        text: AppColors.morningText,
+        muted: AppColors.morningMuted,
+        accent: AppColors.sage,
+        accentSoft: AppColors.sageSoft,
+        button: AppColors.brown,
+        buttonText: AppColors.buttonText,
+      );
+    }
+
+    return const RoutinePalette(
+      background: AppColors.eveningBackground,
+      surface: AppColors.eveningSurface,
+      card: AppColors.eveningCard,
+      border: AppColors.eveningBorder,
+      text: AppColors.eveningText,
+      muted: AppColors.eveningMuted,
+      accent: AppColors.eveningAmber,
+      accentSoft: AppColors.eveningAccentSoft,
+      button: AppColors.eveningButton,
+      buttonText: AppColors.eveningButtonText,
+    );
+  }
+
+  final Color background;
+  final Color surface;
+  final Color card;
+  final Color border;
+  final Color text;
+  final Color muted;
+  final Color accent;
+  final Color accentSoft;
+  final Color button;
+  final Color buttonText;
 }
