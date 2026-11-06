@@ -7,6 +7,7 @@ import 'blocking_service.dart';
 import 'session_store.dart';
 import 'timer_notification_service.dart';
 import '../models/pause_rules.dart';
+import 'keep_timer_running.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({required this.profile});
@@ -76,6 +77,9 @@ class SessionController extends ChangeNotifier {
         isRunning = true;
         hasStarted = true;
         await _readSessionState();
+
+        await KeepRunningTimerClock.instance.refresh();
+
         _wasOnBreak = isOnBreak;
         if (_breakEnd > 0 && !isOnBreak) {
           // A break happened and is over: make sure the shade shows focus time.
@@ -93,6 +97,7 @@ class SessionController extends ChangeNotifier {
         remainingMillis = totalMillis;
         _resetBreakState();
         await _alerts.cancelAll();
+        await KeepRunningTimerClock.instance.refresh();
         _notify();
       }
     } catch (error) {
@@ -155,6 +160,7 @@ class SessionController extends ChangeNotifier {
       await _session.setProfileId(profile.id);
       await _blocking.startBlocking(profile);
       await _readSessionState();
+      await KeepRunningTimerClock.instance.refresh();
       _runTimer();
       await _alerts.scheduleEnd(
         endAt: DateTime.fromMillisecondsSinceEpoch(_endAt),
@@ -175,6 +181,7 @@ class SessionController extends ChangeNotifier {
     try {
       await _session.startBreak(const Duration(minutes: kBreakMinutes));
       await _readSessionState();
+      await KeepRunningTimerClock.instance.refresh();
       _shownSecond = -1;
       _notify();
       await _alerts.startBreak(
