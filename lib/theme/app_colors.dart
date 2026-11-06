@@ -8,4 +8,35 @@ class AppColors {
   static const mediumbrown = Color(0xFF7B563D);
   static const darkbrown = Color(0xFF4E3B31);
   static const yellowhighlight = Color(0xFFFFB60A);
+  
+  static const card = Color(0xFFEDE8DC);
+  static const border = Color(0xFFD3BCA8);
+  static const text = Color(0xFF51443B);
+  static const muted = Color(0xFFA88670);
+  static const brown = Color(0xFF8A6449);
+  static const brownSoft = Color(0xFFE7DDD0);
+  static const buttonText = Color(0xFFFFFCF8);
+
+  static const morningBackground = background;
+  static const morningCard = card;
+  static const morningBorder = border;
+  static const morningText = text;
+  static const morningMuted = muted;
+  static const sage = brown;
+  static const sageSoft = brownSoft;
+  static const amber = Color(0xFFB98965);
+  static const amberSoft = brownSoft;
+
+  static const eveningBackground = Color(0xFF211B18);
+  static const eveningSurface = Color(0xFF2A231F);
+  static const eveningCard = Color(0xFF342B26);
+  static const eveningBorder = Color(0xFF514238);
+  static const eveningText = Color(0xFFF6EFE7);
+  static const eveningMuted = Color(0xFFBDAA98);
+  static const eveningAmber = Color(0xFFD6A46F);
+  static const eveningAccentSoft = Color(0xFF493A2E);
+  static const eveningButton = Color(0xFFE0B27D);
+  static const eveningButtonText = Color(0xFF2B211B);
+  static const moonSage = Color(0xFFAAB7A2);
+  static const espresso = brown;
 }
