@@ -146,7 +146,9 @@ void main() {
     expect(find.text('I WANT TO SLEEP AT'), findsOneWidget);
   });
 
-  testWidgets('focus mode opens and completes the active step', (tester) async {
+  testWidgets('routine flow opens the active step and advances in order', (
+    tester,
+  ) async {
     await tester.pumpWidget(const RestForMeApp());
 
     final focusButton = find.byKey(const Key('focus-mode-button'));
@@ -154,16 +156,29 @@ void main() {
     await tester.tap(focusButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('FOCUS MODE'), findsOneWidget);
+    expect(find.text('MORNING ROUTINE'), findsOneWidget);
     expect(find.text('Matcha & Intention Journal'), findsOneWidget);
-    expect(find.text('Next task: Daily Priority Alignment'), findsOneWidget);
-    expect(find.byKey(const Key('focus-timer')), findsOneWidget);
+    expect(find.text('Next: Daily Priority Alignment'), findsOneWidget);
+    expect(
+      find.byKey(const Key('complete-routine-step-button')),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byKey(const Key('complete-focus-step-button')));
+    await tester.tap(find.byKey(const Key('complete-routine-step-button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('4/5'), findsOneWidget);
-    expect(find.text('1 step remaining'), findsOneWidget);
+    expect(find.text('Daily Priority Alignment'), findsOneWidget);
+    expect(find.text('This is your final activity.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('complete-routine-step-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Morning Routine Completed!'), findsOneWidget);
+    expect(find.byKey(const Key('return-to-overview-button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('return-to-overview-button')));
+    await tester.pumpAndSettle();
+    expect(find.text('5/5'), findsOneWidget);
   });
 
   testWidgets('focus timer clearly waits for confirmation at 00:00', (

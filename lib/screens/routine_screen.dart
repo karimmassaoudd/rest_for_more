@@ -12,8 +12,8 @@ import '../widgets/greeting_header.dart';
 import '../widgets/routine_item_card.dart';
 import '../widgets/routine_action_sheets.dart';
 import '../widgets/routine_switcher.dart';
-import 'focus_mode_screen.dart';
 import 'reminder_settings_screen.dart';
+import 'routine_flow_screen.dart';
 import 'routine_history_screen.dart';
 
 class RoutineScreen extends StatefulWidget {
@@ -211,12 +211,16 @@ class _RoutineScreenState extends State<RoutineScreen> {
     if (!wasCompleted) _scheduleEveningTransition();
   }
 
-  void _completeStep(int index, RoutinePeriod period) {
-    if (_period != period) return;
+  Future<void> _completeStep(
+    int index,
+    RoutinePeriod period, {
+    bool allowPeriodTransition = true,
+  }) {
+    if (_period != period) return Future.value();
     final source = period == RoutinePeriod.morning
         ? _morningSteps
         : _eveningSteps;
-    if (source[index].isCompleted) return;
+    if (source[index].isCompleted) return Future.value();
 
     setState(() {
       final updated = List<RoutineStep>.of(source);
@@ -227,8 +231,10 @@ class _RoutineScreenState extends State<RoutineScreen> {
         _eveningSteps = updated;
       }
     });
+    // Persist in the background so the next activity opens immediately.
     unawaited(_saveProgress(period));
-    _scheduleEveningTransition();
+    if (allowPeriodTransition) _scheduleEveningTransition();
+    return Future.value();
   }
 
   void _scheduleEveningTransition() {
@@ -440,27 +446,31 @@ class _RoutineScreenState extends State<RoutineScreen> {
     final period = _period;
     final index = _steps.indexWhere((step) => !step.isCompleted);
     if (index == -1) {
-      if (period == RoutinePeriod.morning) {
-        setState(() => _period = RoutinePeriod.evening);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Your evening routine is complete.')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${period == RoutinePeriod.morning ? 'Morning' : 'Evening'} Routine Completed!',
+          ),
+        ),
+      );
       return;
     }
 
-    final completed = await Navigator.of(context).push<bool>(
+    final steps = List<RoutineStep>.of(_steps);
+    await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => FocusModeScreen(
+        builder: (_) => RoutineFlowScreen(
           period: period,
-          step: _steps[index],
-          nextStep: _nextIncompleteStep(index),
+          steps: steps,
           palette: RoutinePalette.forPeriod(period),
+          onStepCompleted: (stepIndex) => _completeStep(
+            stepIndex,
+            period,
+            allowPeriodTransition: false,
+          ),
         ),
       ),
     );
-    if (completed == true && mounted) _completeStep(index, period);
   }
 
   RoutineStep? _nextIncompleteStep(int currentIndex) {
