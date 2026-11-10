@@ -4,7 +4,7 @@ import 'services/timer_notification_service.dart';
 import 'services/focus_notification_navigation.dart';
 import 'services/active_focus_profile.dart';
 import 'theme/app_theme.dart';
-//local imports
+
 import 'router.dart';
 
 Future<void> main() async {
