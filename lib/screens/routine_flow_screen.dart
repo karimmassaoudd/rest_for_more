@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/routine_step.dart';
 import '../theme/app_colors.dart';
+import '../widgets/activity_timer.dart';
 
 /// Keeps a user in one uninterrupted routine while individual steps are done.
 class RoutineFlowScreen extends StatefulWidget {
@@ -29,6 +30,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
   late int _currentIndex;
   Timer? _timer;
   int _secondsRemaining = 0;
+  int _totalSeconds = 0;
   bool _isTimerRunning = true;
   bool _isCompleting = false;
 
@@ -57,9 +59,8 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
 
   void _resetTimer() {
     _timer?.cancel();
-    _secondsRemaining = _durationInSeconds(
-      widget.steps[_currentIndex].duration,
-    );
+    _totalSeconds = _durationInSeconds(widget.steps[_currentIndex].duration);
+    _secondsRemaining = _totalSeconds;
     _isTimerRunning = true;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
@@ -72,14 +73,6 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
       } else {
         setState(() => _secondsRemaining--);
       }
-    });
-  }
-
-  void _moveTo(int index) {
-    if (index < 0 || index >= widget.steps.length || _isCompleting) return;
-    setState(() {
-      _currentIndex = index;
-      _resetTimer();
     });
   }
 
@@ -143,9 +136,6 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     final step = isComplete ? null : widget.steps[_currentIndex];
     final nextIndex = isComplete ? -1 : _nextIncompleteIndex(_currentIndex + 1);
     final nextStep = nextIndex == -1 ? null : widget.steps[nextIndex];
-    final minutes = (_secondsRemaining ~/ 60).toString().padLeft(2, '0');
-    final seconds = (_secondsRemaining % 60).toString().padLeft(2, '0');
-
     return Scaffold(
       backgroundColor: widget.palette.background,
       appBar: AppBar(
@@ -233,18 +223,18 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 28),
-                Text(
-                  '$minutes:$seconds',
+                const SizedBox(height: 22),
+                ActivityTimer(
                   key: const Key('routine-flow-timer'),
-                  style: TextStyle(
-                    color: widget.palette.text,
-                    fontSize: 52,
-                    fontWeight: FontWeight.w300,
-                    letterSpacing: 2,
+                  secondsRemaining: _secondsRemaining,
+                  totalSeconds: _totalSeconds,
+                  palette: ActivityTimerPalette(
+                    active: widget.palette.accent,
+                    inactive: widget.palette.border,
+                    text: widget.palette.text,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 OutlinedButton.icon(
                   key: const Key('routine-flow-pause-button'),
                   onPressed: _toggleTimer,
@@ -263,41 +253,6 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                 ),
               ],
               const Spacer(),
-              if (!isComplete)
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        key: const Key('routine-flow-back-button'),
-                        onPressed: _currentIndex == 0
-                            ? null
-                            : () => _moveTo(_currentIndex - 1),
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        label: const Text('Back'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: widget.palette.text,
-                          side: BorderSide(color: widget.palette.border),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        key: const Key('routine-flow-forward-button'),
-                        onPressed: _currentIndex == widget.steps.length - 1
-                            ? null
-                            : () => _moveTo(_currentIndex + 1),
-                        icon: const Icon(Icons.arrow_forward_rounded),
-                        label: const Text('Next'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: widget.palette.text,
-                          side: BorderSide(color: widget.palette.border),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              if (!isComplete) const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 height: 56,

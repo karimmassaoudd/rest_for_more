@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/routine_step.dart';
 import '../theme/app_colors.dart';
+import '../widgets/activity_timer.dart';
 
 class FocusModeScreen extends StatefulWidget {
   const FocusModeScreen({
@@ -26,12 +27,14 @@ class FocusModeScreen extends StatefulWidget {
 class _FocusModeScreenState extends State<FocusModeScreen> {
   Timer? _timer;
   late int _secondsRemaining;
+  late int _totalSeconds;
   bool _isRunning = true;
 
   @override
   void initState() {
     super.initState();
-    _secondsRemaining = _durationInSeconds(widget.step.duration);
+    _totalSeconds = _durationInSeconds(widget.step.duration);
+    _secondsRemaining = _totalSeconds;
     _startTimer();
   }
 
@@ -74,8 +77,6 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final minutes = (_secondsRemaining ~/ 60).toString().padLeft(2, '0');
-    final seconds = (_secondsRemaining % 60).toString().padLeft(2, '0');
     final morning = widget.period == RoutinePeriod.morning;
     final timerFinished = _secondsRemaining == 0;
 
@@ -156,18 +157,18 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 30),
-              Text(
-                '$minutes:$seconds',
+              const SizedBox(height: 22),
+              ActivityTimer(
                 key: const Key('focus-timer'),
-                style: TextStyle(
-                  color: widget.palette.text,
-                  fontSize: 58,
-                  fontWeight: FontWeight.w300,
-                  letterSpacing: 2,
+                secondsRemaining: _secondsRemaining,
+                totalSeconds: _totalSeconds,
+                palette: ActivityTimerPalette(
+                  active: widget.palette.accent,
+                  inactive: widget.palette.border,
+                  text: widget.palette.text,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
                 child: timerFinished
