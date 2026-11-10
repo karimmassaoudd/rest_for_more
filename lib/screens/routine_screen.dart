@@ -232,6 +232,20 @@ class _RoutineScreenState extends State<RoutineScreen> {
     return Future.value();
   }
 
+  void _scheduleEveningTransition() {
+    if (!_autoAdvanceToEvening ||
+        _period != RoutinePeriod.morning ||
+        _morningSteps.any((step) => !step.isCompleted)) {
+      return;
+    }
+    setState(() => _period = RoutinePeriod.evening);
+  }
+
+  void _selectPeriod(RoutinePeriod period) {
+    if (period == _period) return;
+    setState(() => _period = period);
+  }
+
   Future<void> _refreshRoutine() async {
     if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
@@ -400,6 +414,9 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
     setState(() {
       _autoAdvanceToEvening = result.autoAdvanceToEvening;
+      if (result.switchToEvening) {
+        _period = RoutinePeriod.evening;
+      }
       if (result.resetProgress) {
         final resetSteps = _steps
             .map((step) => step.copyWith(isCompleted: false))
@@ -435,11 +452,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
           period: period,
           steps: steps,
           palette: RoutinePalette.forPeriod(period),
-          onStepCompleted: (stepIndex) => _completeStep(
-            stepIndex,
-            period,
-            allowPeriodTransition: false,
-          ),
+          onStepCompleted: (stepIndex) =>
+              _completeStep(stepIndex, period, allowPeriodTransition: false),
         ),
       ),
     );

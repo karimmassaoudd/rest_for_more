@@ -59,8 +59,10 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
     final selected = await showTimePicker(
       context: context,
       initialTime: morning ? _morning : _evening,
-      builder: (context, child) =>
-          Theme(data: isDark ? AppTheme.dark : AppTheme.light, child: child!),
+      builder: (context, child) => Theme(
+        data: isDark ? AppTheme.instance.dark : AppTheme.light,
+        child: child!,
+      ),
     );
     if (selected == null || !mounted) return;
     setState(() => morning ? _morning = selected : _evening = selected);
@@ -115,7 +117,7 @@ class _ReminderSettingsScreenState extends State<ReminderSettingsScreen> {
     final palette = RoutinePalette.forPeriod(_appearance);
     final isDark = _appearance == RoutinePeriod.evening;
     return Theme(
-      data: isDark ? AppTheme.dark : AppTheme.light,
+      data: isDark ? AppTheme.instance.dark : AppTheme.light,
       child: Scaffold(
         backgroundColor: palette.background,
         appBar: AppBar(

@@ -1,12 +1,10 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-
 import 'services/profile_bootstrap.dart';
 import 'services/timer_notification_service.dart';
 import 'services/focus_notification_navigation.dart';
 import 'services/active_focus_profile.dart';
 import 'theme/app_theme.dart';
-
+//local imports
 import 'router.dart';
 
 Future<void> main() async {
@@ -56,6 +54,8 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp.router(
       title: 'Rest For More',
       theme: buildAppTheme(),
+      darkTheme: AppTheme.instance.dark,
+      themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
       routerConfig: router,
     );

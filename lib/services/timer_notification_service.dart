@@ -26,7 +26,7 @@ class TimerNotificationService {
     try {
       await Alarm.init();
       await _notifications.initialize(
-        const InitializationSettings(
+        settings: const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(),
         ),

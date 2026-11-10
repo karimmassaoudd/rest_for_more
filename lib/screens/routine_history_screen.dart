@@ -106,7 +106,7 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
     final palette = RoutinePalette.forPeriod(_appearance);
     final isDark = _appearance == RoutinePeriod.evening;
     return Theme(
-      data: isDark ? AppTheme.dark : AppTheme.light,
+      data: isDark ? AppTheme.instance.dark : AppTheme.light,
       child: Scaffold(
         backgroundColor: palette.background,
         appBar: AppBar(

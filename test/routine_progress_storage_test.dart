@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rest_for_more/models/routine_step.dart';
-import 'package:rest_for_more/services/routine_progress_storage.dart';
+import 'package:flutter_application_rest_for_more/models/routine_step.dart';
+import 'package:flutter_application_rest_for_more/services/routine_progress_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
