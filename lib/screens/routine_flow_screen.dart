@@ -230,7 +230,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                   totalSeconds: _totalSeconds,
                   // Leaves enough room for the action buttons on compact
                   // screens, avoiding a bottom RenderFlex overflow.
-                  size: 256,
+                  size: 240,
                   palette: ActivityTimerPalette(
                     active: widget.palette.accent,
                     inactive: widget.palette.border,
