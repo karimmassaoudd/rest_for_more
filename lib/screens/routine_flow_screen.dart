@@ -152,8 +152,13 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
-          child: Column(
-            children: [
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
               const Spacer(),
               Container(
                 width: 72,
@@ -292,7 +297,11 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                   ),
                 ),
               ),
-            ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),
