@@ -152,13 +152,8 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(28, 20, 28, 28),
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
+          child: Column(
+            children: [
               const Spacer(),
               Container(
                 width: 72,
@@ -235,7 +230,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                   totalSeconds: _totalSeconds,
                   // Leaves enough room for the action buttons on compact
                   // screens, avoiding a bottom RenderFlex overflow.
-                  size: 240,
+                  size: 220,
                   palette: ActivityTimerPalette(
                     active: widget.palette.accent,
                     inactive: widget.palette.border,
@@ -297,11 +292,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                   ),
                 ),
               ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            ],
           ),
         ),
       ),
