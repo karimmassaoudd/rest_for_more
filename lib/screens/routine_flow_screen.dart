@@ -228,6 +228,9 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                   key: const Key('routine-flow-timer'),
                   secondsRemaining: _secondsRemaining,
                   totalSeconds: _totalSeconds,
+                  // Leaves enough room for the action buttons on compact
+                  // screens, avoiding a bottom RenderFlex overflow.
+                  size: 256,
                   palette: ActivityTimerPalette(
                     active: widget.palette.accent,
                     inactive: widget.palette.border,

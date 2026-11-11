@@ -9,11 +9,13 @@ class ActivityTimer extends StatelessWidget {
     required this.secondsRemaining,
     required this.totalSeconds,
     required this.palette,
+    this.size = 270,
   });
 
   final int secondsRemaining;
   final int totalSeconds;
   final ActivityTimerPalette palette;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +28,8 @@ class ActivityTimer extends StatelessWidget {
     return Semantics(
       label: 'Timer, $minutes minutes and $seconds seconds remaining',
       child: SizedBox(
-        width: 270,
-        height: 270,
+        width: size,
+        height: size,
         child: CustomPaint(
           painter: _TimerTicksPainter(
             progress: progress,
