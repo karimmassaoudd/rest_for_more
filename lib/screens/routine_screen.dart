@@ -262,12 +262,52 @@ class _RoutineScreenState extends State<RoutineScreen> {
   Future<void> _refreshRoutine() async {
     if (_isRefreshing) return;
     setState(() => _isRefreshing = true);
-    await _loadProgress();
-    if (!mounted) return;
-    setState(() => _isRefreshing = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Routine refreshed from saved data.')),
-    );
+    final morningSteps = _morningSteps
+        .map((step) => step.copyWith(isCompleted: false))
+        .toList();
+    final eveningSteps = _eveningSteps
+        .map((step) => step.copyWith(isCompleted: false))
+        .toList();
+
+    setState(() {
+      _period = RoutinePeriod.morning;
+      _morningSteps = morningSteps;
+      _eveningSteps = eveningSteps;
+    });
+
+    try {
+      await Future.wait([
+        widget.progressStorage.saveCompletedTasks(
+          RoutinePeriod.morning,
+          morningSteps,
+        ),
+        widget.progressStorage.saveCompletedTasks(
+          RoutinePeriod.evening,
+          eveningSteps,
+        ),
+        widget.progressStorage.saveSteps(RoutinePeriod.morning, morningSteps),
+        widget.progressStorage.saveSteps(RoutinePeriod.evening, eveningSteps),
+        widget.progressStorage.saveToday(
+          morningSteps: morningSteps,
+          eveningSteps: eveningSteps,
+        ),
+        RoutineReminderService().refreshIfEnabled(
+          morningRemaining: morningSteps.length,
+          eveningRemaining: eveningSteps.length,
+        ),
+      ]);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Routine restarted from the beginning.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not restart the routine.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isRefreshing = false);
+    }
   }
 
   Future<void> _saveAll() async {

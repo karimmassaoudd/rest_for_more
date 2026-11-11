@@ -43,7 +43,7 @@ class GreetingHeader extends StatelessWidget {
             ),
             IconButton(
               visualDensity: VisualDensity.compact,
-              tooltip: isMorning ? 'Refresh routine' : 'Routine settings',
+              tooltip: isMorning ? 'Restart routine' : 'Routine settings',
               onPressed: actionInProgress ? null : onAction,
               icon: actionInProgress
                   ? SizedBox(
