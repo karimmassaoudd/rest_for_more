@@ -1,0 +1,24 @@
+{
+  "@@locale": "en",
+  "welcomeTitle": "Welcome to Rest For More",
+
+  "languageTitle": "Choose your language",
+  "languageSubtitle": "You can change this later in your profile settings.",
+  "languageContinue": "Continue",
+
+  "tutorialFocusTitle": "Focus sessions",
+  "tutorialFocusText": "Pick a profile like Study or Read, choose a time, and distracting apps are blocked until it ends.",
+
+  "tutorialReachableTitle": "Always reachable",
+  "tutorialReachableText": "Calls, messages and the apps you choose stay available during every session.",
+
+  "tutorialRoutinesTitle": "Morning and evening routines",
+  "tutorialRoutinesText": "Small calm steps to start and end your day without your phone.",
+
+  "tutorialControlTitle": "You stay in control",
+  "tutorialControlText": "Need your phone after all? Emergency unlock ends a session whenever you need it.",
+
+  "tutorialStart": "Start",
+  "tutorialNext": "Next",
+  "tutorialBack": "Back"
+}

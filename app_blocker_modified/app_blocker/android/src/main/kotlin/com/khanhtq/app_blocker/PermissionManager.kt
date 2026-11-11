@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import com.khanhtq.app_blocker.blocking.AppBlockerAccessibilityService
@@ -85,11 +86,23 @@ class PermissionManager(private val context: Context) {
     /**
      * Opens the system Accessibility settings so the user can enable
      * [AppBlockerAccessibilityService].
+     *
+     * Asks Settings to scroll to and highlight our service. This works on Pixel/AOSP;
+     * Samsung One UI ignores it and opens the main Accessibility page instead.
+     * Android doesn't let normal apps open the service's toggle page directly.
      */
     fun requestAccessibilityPermission(activity: Activity) {
-        if (!checkAccessibilityPermission()) {
-            activity.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        if (checkAccessibilityPermission()) return
+
+        val component = ComponentName(activity, AppBlockerAccessibilityService::class.java)
+            .flattenToString()
+        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            putExtra(":settings:fragment_args_key", component)
+            putExtra(":settings:show_fragment_args", Bundle().apply {
+                putString(":settings:fragment_args_key", component)
+            })
         }
+        activity.startActivity(intent)
     }
 
     // ------------------------------------------------------------------

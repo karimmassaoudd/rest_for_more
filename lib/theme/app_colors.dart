@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/routine_step.dart';
+import '../models/routines/routine_step.dart';
 /// Branding colors for the whole application
 class AppColors {
   static const background = Color(0xFFFAF8F4);

@@ -39,6 +39,9 @@ class AppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         private const val GET_CAPABILITIES = "getCapabilities"
         private const val CHECK_PERMISSION = "checkPermission"
         private const val REQUEST_PERMISSION = "requestPermission"
+        private const val CHECK_PERMISSION_DETAILS = "checkPermissionDetails"
+        private const val REQUEST_ACCESSIBILITY_PERMISSION = "requestAccessibilityPermission"
+        private const val REQUEST_EXACT_ALARM_PERMISSION = "requestExactAlarmPermission"
         private const val GET_APPS = "getApps"
         private const val BLOCK_APPS = "blockApps"
         private const val BLOCK_ALL = "blockAll"
@@ -166,6 +169,31 @@ class AppBlockerPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                     return
                 }
                 result.success(permissionManager.requestAllPermissions(currentActivity))
+            }
+
+            CHECK_PERMISSION_DETAILS -> result.success(
+                mapOf(
+                    "accessibility" to permissionManager.checkAccessibilityPermission(),
+                    "exactAlarm" to permissionManager.checkExactAlarmPermission(),
+                )
+            )
+
+            REQUEST_ACCESSIBILITY_PERMISSION -> {
+                val currentActivity = activity ?: run {
+                    result.error(ERROR_SERVICE_UNAVAILABLE, "Activity is not available.", null)
+                    return
+                }
+                permissionManager.requestAccessibilityPermission(currentActivity)
+                result.success(null)
+            }
+
+            REQUEST_EXACT_ALARM_PERMISSION -> {
+                val currentActivity = activity ?: run {
+                    result.error(ERROR_SERVICE_UNAVAILABLE, "Activity is not available.", null)
+                    return
+                }
+                permissionManager.requestExactAlarmPermission(currentActivity)
+                result.success(null)
             }
 
             // -- App Discovery --

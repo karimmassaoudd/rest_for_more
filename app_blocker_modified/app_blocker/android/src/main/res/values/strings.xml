@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="accessibility_service_description">Uses accessibility features to detect when
-        blocked apps are opened and display a block screen.</string>
+    <string name="accessibility_service_description">Lets Rest For More notice when you open an app you chose to block during a focus session, and show the block screen instead. Rest For More only checks which app is open. It never reads what is on your screen.</string>
 </resources>

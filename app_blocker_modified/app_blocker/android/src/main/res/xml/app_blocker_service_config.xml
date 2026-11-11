@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Accessibility service configuration for AppBlockerAccessibilityService.
+    Accessibility service configuration for AppBlockerAccessibilityService.
 
-  We listen to TYPE_WINDOW_STATE_CHANGED for
-  robust foreground app detection. canRetrieveWindowContent is false because we
-  only need the package name from each event, not the full window hierarchy.
+    We listen to TYPE_WINDOW_STATE_CHANGED for
+    robust foreground app detection. canRetrieveWindowContent is true so that
+    when a break ends we can ask which app is really on screen
+    (rootInActiveWindow). Samsung launchers send a "ghost" home-screen event
+    right after an app opens, so the last event is not reliable.
+    We only read the package name, never the screen content.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/accessibility_service_description"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
-    android:canRetrieveWindowContent="false" />
+    android:canRetrieveWindowContent="true" />

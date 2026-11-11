@@ -25,7 +25,7 @@
         <service
             android:name=".blocking.AppBlockerAccessibilityService"
             android:exported="true"
-            android:label="App Blocker"
+            android:label="Rest For More"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -68,6 +68,11 @@
                 <action android:name="com.khanhtq.app_blocker.SCHEDULE_END" />
             </intent-filter>
         </receiver>
+
+        <!-- Wakes the blocker exactly when a break ends (AlarmManager). -->
+        <receiver
+            android:name=".blocking.BreakEndReceiver"
+            android:exported="false" />
 
     </application>
 

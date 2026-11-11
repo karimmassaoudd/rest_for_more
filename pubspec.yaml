@@ -43,10 +43,25 @@ dependencies:
     path: app_blocker_modified/app_blocker
   google_fonts: ^9.0.0
   shared_preferences: ^2.5.5
+  clerk_flutter: 0.0.18-beta # beta: pinned on purpose, no ^
+  clerk_auth: 0.0.18-beta # same version as clerk_flutter; used for Strategy / errors
+  flutter_localizations:
+    sdk: flutter
+  # intl: ^0.20.3
+
+  intl: any
+shared_preferences: any
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/rfm_logo_transparent_bg.png"
+  remove_alpha_ios: true
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -63,6 +78,7 @@ flutter:
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
+  generate: true
   uses-material-design: true
 
   assets:

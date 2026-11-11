@@ -1,11 +1,15 @@
 package com.khanhtq.app_blocker.blocking
 
 import android.accessibilityservice.AccessibilityService
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.khanhtq.app_blocker.event.BlockEventStreamHandler
@@ -28,6 +32,9 @@ import com.khanhtq.app_blocker.persistence.BlockerPreferences
  * - Own-package events (from the block Activity) are already filtered, so no
  *   race between "overlay just hidden" and "next blocked-app event"
  *
+ * **Break end:** when a break ends, Android's AlarmManager wakes the service at
+ * the exact moment ([BreakEndReceiver]). An in-app Handler timer runs as a backup.
+ *
  * **Setup:** The user must enable this service in Settings → Accessibility → App Blocker.
  */
 class AppBlockerAccessibilityService : AccessibilityService() {
@@ -48,10 +55,17 @@ class AppBlockerAccessibilityService : AccessibilityService() {
          */
         private const val BLOCK_LAUNCH_DELAY_MS = 150L
 
+        /** Extra time after the break end before checking, so Flutter's state is settled. */
+        private const val BREAK_END_MARGIN_MS = 300L
+
+        /** Request code for the break-end alarm's PendingIntent. */
+        private const val BREAK_END_REQUEST_CODE = 4711
+
         /**
          * The running service instance, or null if the service is not connected.
          * Used by [BlockingServiceManager] to trigger an immediate block check
-         * when blocking state changes (e.g. a schedule activates).
+         * when blocking state changes (e.g. a schedule activates), and by
+         * [BreakEndReceiver] when a break ends.
          */
         @Volatile
         var instance: AppBlockerAccessibilityService? = null
@@ -76,6 +90,9 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     @Volatile
     private var currentPackage: String = ""
 
+    /** When the last block was triggered; prevents double blocks from duplicate events. */
+    private var lastBlockAt = 0L
+
     // ------------------------------------------------------------------
     // Lifecycle
     // ------------------------------------------------------------------
@@ -93,6 +110,7 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         instance = null
         handler.removeCallbacksAndMessages(null)
+        cancelBreakEndAlarm()
         super.onDestroy()
     }
 
@@ -111,6 +129,12 @@ class AppBlockerAccessibilityService : AccessibilityService() {
         if (pkg.isNotEmpty()) {
             checkAndBlock(pkg)
         }
+    }
+
+    /** Called by [BreakEndReceiver] when Android's break-end alarm fires. */
+    fun onBreakEndAlarm() {
+        Log.d(TAG, "break end alarm fired")
+        recheckAfterBreak()
     }
 
     // ------------------------------------------------------------------
@@ -143,18 +167,21 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     // ------------------------------------------------------------------
 
     private fun checkAndBlock(packageName: String) {
-        if (!preferences.isBlocking()) return
+        if (!preferences.isBlocking()) {
+            Log.d(TAG, "skip $packageName: blocking is off")
+            return
+        }
 
-    // Session is over: stop blocking right here, no need to wait for the Flutter app.
         if (isSessionExpired()) {
+            Log.d(TAG, "skip $packageName: session expired")
             preferences.setIsBlocking(false)
             preferences.setBlockedApps(emptySet())
             preferences.setBlockAll(false)
             return
         }
 
-    // On a break: let the user through, but check again when it ends.
         if (isOnBreak()) {
+            Log.d(TAG, "skip $packageName: on break")
             scheduleBreakEndCheck()
             return
         }
@@ -172,6 +199,14 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         // Don't re-launch if the block screen is already in the foreground.
         if (BlockedAppActivity.isVisible) return
+
+        // Two triggers within half a second (duplicate events, alarm + backup) → block once.
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastBlockAt < 500L) {
+            lastPackage = ""  // so the next event for this app is checked again
+            return
+        }
+        lastBlockAt = now
 
         // Press home immediately so the blocked app is no longer visible,
         // then show the block screen after a short settling delay.
@@ -195,14 +230,18 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     }
 
     /**
-    * True if a session end time was saved by the Flutter app and has passed.
-    * Flutter's SharedPreferences live in "FlutterSharedPreferences" with a "flutter." key prefix.
-    */
+     * True if a session end time was saved by the Flutter app and has passed.
+     * Flutter's SharedPreferences live in "FlutterSharedPreferences" with a "flutter." key prefix.
+     */
     private fun isSessionExpired(): Boolean {
         val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
         val endTime = flutterPrefs.getLong("flutter.sessionEndTimeMillis", 0L)
         return endTime > 0L && System.currentTimeMillis() >= endTime
     }
+
+    // ------------------------------------------------------------------
+    // Breaks
+    // ------------------------------------------------------------------
 
     private val breakEndCheck = Runnable { recheckAfterBreak() }
 
@@ -213,17 +252,73 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     private fun isOnBreak(): Boolean =
         System.currentTimeMillis() < breakEndMillis()
 
-    /** One check right after the break ends (replaces any earlier one). */
+    /** PendingIntent that wakes [BreakEndReceiver]; the same one is reused so it can be replaced or cancelled. */
+    private fun breakEndPendingIntent(): PendingIntent =
+        PendingIntent.getBroadcast(
+            this,
+            BREAK_END_REQUEST_CODE,
+            Intent(this, BreakEndReceiver::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+    /**
+     * One check right after the break ends (replaces any earlier one).
+     *
+     * Main: Android's AlarmManager wakes us at the exact moment, even when
+     * Samsung's battery saving holds the app back.
+     * Backup: an in-app Handler timer, 2 s after the alarm (only matters if the alarm doesn't arrive).
+     */
     private fun scheduleBreakEndCheck() {
+        val triggerAt = breakEndMillis() + BREAK_END_MARGIN_MS
+        val delay = triggerAt - System.currentTimeMillis()
+
+        // Backup timer (2 s after the alarm; only matters if the alarm doesn't arrive).
         handler.removeCallbacks(breakEndCheck)
-        val delay = breakEndMillis() - System.currentTimeMillis() + 300L
-        handler.postDelayed(breakEndCheck, delay.coerceAtLeast(0L))
+        handler.postDelayed(breakEndCheck, (delay + 2000L).coerceAtLeast(0L))
+
+        // Exact alarm (falls back to an inexact one if the permission is missing).
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val exact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            alarmManager.canScheduleExactAlarms()
+        try {
+            if (exact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP, triggerAt, breakEndPendingIntent(),
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP, triggerAt, breakEndPendingIntent(),
+                )
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "break: could not set alarm, using backup timer only", e)
+        }
+
+        Log.d(TAG, "break: recheck scheduled in ${delay / 1000}s (exact alarm=$exact)")
     }
+
+    private fun cancelBreakEndAlarm() {
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(breakEndPendingIntent())
+    }
+
+    /** The app that is really on screen right now, or null if Android can't tell us. */
+    private fun foregroundPackage(): String? =
+        try {
+            rootInActiveWindow?.packageName?.toString()
+        } catch (_: Exception) {
+            null
+        }
 
     /** The break is over: block whatever app is on screen, if it is blocked. */
     private fun recheckAfterBreak() {
-        val pkg = currentPackage
-        if (pkg.isEmpty() || pkg == packageName) return
+        // Whichever fired first (alarm or backup timer), cancel the other one.
+        handler.removeCallbacks(breakEndCheck)
+        cancelBreakEndAlarm()
+
+        val pkg = foregroundPackage() ?: currentPackage
+        Log.d(TAG, "break over: recheck foreground=$pkg (last event: $currentPackage)")
+        if (pkg.isEmpty() || pkg == packageName || pkg == SYSTEM_UI_PACKAGE) return
         checkAndBlock(pkg)
     }
 
