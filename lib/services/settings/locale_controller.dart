@@ -1,70 +1,60 @@
-// REST-107 / REST-116 — the app's language (English / Dutch).
-//
-// TODO:
-// - One instance for the whole app (like WelcomeChoiceStore.instance).
-// - Load the saved language on start-up; save it when it changes
-//   (shared_preferences is already installed).
-// - Default: the phone's language if English or Dutch, otherwise English.
-// - Tell MaterialApp.router when the language changes, so every screen
-//   switches at once.
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// The app's language: English or Dutch.
+///
+/// One instance for the whole app. main.dart loads it before the first
+/// screen and rebuilds MaterialApp whenever it changes, so every screen
+/// switches language at once. The choice is saved on the phone.
 class LocaleController extends ChangeNotifier {
-  // Singleton: one language controller for the entire app.
-  static final LocaleController instance = LocaleController._internal();
+  LocaleController._();
+  static final LocaleController instance = LocaleController._();
 
-  LocaleController._internal();
+  static const _languageKey = 'app_language';
 
-  static const String _languageKey = 'app_language';
+  /// Languages the app has translations for (see lib/l10n/*.arb), each
+  /// with its name written in that language. To add a language, add it
+  /// here and add its .arb file.
+  static const languageNames = {'en': 'English', 'nl': 'Nederlands'};
 
   Locale _locale = const Locale('en');
-
-  Locale get locale => _locale;
-
   bool _initialized = false;
 
-  // Initialize language on application startup.
+  /// The language the app is shown in.
+  Locale get locale => _locale;
+
+  /// Call once in main(), before runApp().
+  ///
+  /// Uses the saved choice; without one, the phone's language if it's
+  /// supported, otherwise English.
   Future<void> initialize() async {
     if (_initialized) return;
 
     final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_languageKey);
+    final device =
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode;
 
-    final savedLanguage = prefs.getString(_languageKey);
-
-    if (savedLanguage == 'en' || savedLanguage == 'nl') {
-      _locale = Locale(savedLanguage!);
-    } else {
-      // Use phone language if supported.
-      final deviceLanguage =
-          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
-
-      _locale = Locale(deviceLanguage == 'nl' ? 'nl' : 'en');
-    }
+    final code = languageNames.containsKey(saved)
+        ? saved!
+        : (languageNames.containsKey(device) ? device : 'en');
+    _locale = Locale(code);
 
     _initialized = true;
     notifyListeners();
   }
 
-  // Change language throughout the application.
+  /// Switches the whole app to [languageCode] ('en' or 'nl') and saves it.
+  /// Unsupported codes are ignored.
   Future<void> setLanguage(String languageCode) async {
-    if (languageCode != 'en' && languageCode != 'nl') {
-      return;
-    }
-
+    if (!languageNames.containsKey(languageCode)) return;
     if (_locale.languageCode == languageCode) return;
 
     _locale = Locale(languageCode);
 
     final prefs = await SharedPreferences.getInstance();
-
     await prefs.setString(_languageKey, languageCode);
 
     notifyListeners();
   }
-
-  bool get isDutch => _locale.languageCode == 'nl';
-
-  bool get isEnglish => _locale.languageCode == 'en';
 }

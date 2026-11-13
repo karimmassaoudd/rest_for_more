@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+/// Search box above the app list. Reports every change to the text.
 class AppSearchField extends StatelessWidget {
-  final ValueChanged<String> onSearchQueryChanged;
   const AppSearchField({super.key, required this.onSearchQueryChanged});
+
+  final ValueChanged<String> onSearchQueryChanged;
 
   @override
   Widget build(BuildContext context) {

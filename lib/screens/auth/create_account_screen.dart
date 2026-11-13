@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/auth/verify_args.dart';
 import '../../services/auth/auth_errors.dart';
 import '../../services/auth/auth_flow.dart';
 import '../../services/onboarding/welcome_choice_store.dart';
 import '../../widgets/auth/auth_widgets.dart';
-import '../../screens/auth/verify_email_screen.dart';
 
-/// REST-98 Create an account (Figma screen 2 + error variant).
+/// Create-account screen.
+///
+/// Name, email and password are checked locally first, then sent to Clerk.
+/// Clerk either signs the user in straight away or asks for an email code,
+/// in which case we go to the verify screen.
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
 
@@ -21,6 +25,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   final _password = TextEditingController();
 
   bool _loading = false;
+  String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _generalError;
@@ -33,10 +38,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     super.dispose();
   }
 
+  /// Local checks before calling Clerk. Shows the errors under the fields
+  /// and returns true when everything is valid.
   bool _validate() {
+    final name = _name.text.trim();
     final email = _email.text.trim();
     final password = _password.text;
     setState(() {
+      _nameError = name.isEmpty ? 'Enter your name' : null;
       _emailError = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)
           ? null
           : 'Enter a valid email address';
@@ -45,7 +54,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           : 'Use at least 8 characters';
       _generalError = null;
     });
-    return _emailError == null && _passwordError == null;
+    return _nameError == null && _emailError == null && _passwordError == null;
   }
 
   Future<void> _signUp() async {
@@ -81,13 +90,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
             _emailError = failure.message;
           case AuthField.password:
             _passwordError = failure.message;
+          // This screen has no code field; show code errors as a general error.
           case AuthField.code:
           case AuthField.general:
             _generalError = failure.message;
         }
       });
     } finally {
-      // Inputs stay filled in after an error (e.g. offline), REST-98.
+      // Inputs stay filled in after an error (e.g. offline).
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -110,10 +120,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         ),
         children: [
           AuthTextField(
-            label: 'Name (optional)',
+            label: 'Name',
             hint: 'Your name',
             controller: _name,
             enabled: !_loading,
+            errorText: _nameError,
             autofillHints: const [AutofillHints.name],
             textCapitalization: TextCapitalization.words,
           ),

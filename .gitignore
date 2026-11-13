@@ -47,5 +47,5 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-# # Clerk keys (per developer / environment)
-# clerk.json
+# Clerk keys (per developer / environment)
+clerk.json

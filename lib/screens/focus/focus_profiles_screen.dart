@@ -1,13 +1,17 @@
 import 'package:app_blocker/app_blocker.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../models/focus/focus_profile_meta.dart';
 import '../../services/focus/profile_events.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/common/text_input_dialog.dart';
 
-import 'package:go_router/go_router.dart';
-
+/// All focus profiles, opened from Settings → Edit profiles.
+///
+/// Tap a profile to open its detail page; "Create Profile" adds a new,
+/// empty profile with the name the user types.
 class FocusProfilesScreen extends StatefulWidget {
   const FocusProfilesScreen({super.key});
 
@@ -16,8 +20,8 @@ class FocusProfilesScreen extends StatefulWidget {
 }
 
 class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
-  final blocker = AppBlocker.instance;
-  List<BlockProfile> profiles = [];
+  final _blocker = AppBlocker.instance;
+  List<BlockProfile> _profiles = [];
   bool _loading = true;
 
   @override
@@ -28,10 +32,10 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
 
   Future<void> _loadProfiles() async {
     try {
-      final fetched = await blocker.getProfiles();
+      final fetched = await _blocker.getProfiles();
       if (!mounted) return;
       setState(() {
-        profiles = fetched;
+        _profiles = fetched;
         _loading = false;
       });
     } catch (error) {
@@ -41,9 +45,25 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
     }
   }
 
-  Future<void> _createProfile(BlockProfile profile) async {
+  /// Asks for a name and creates an empty profile with it.
+  Future<void> _onCreatePressed() async {
+    final name = await showTextInputDialog(
+      context,
+      title: 'Enter Profile Name',
+      hint: 'e.g. Study',
+      confirmLabel: 'Create',
+    );
+    if (name == null || name.trim().isEmpty) return;
+
     try {
-      await blocker.createProfile(profile);
+      await _blocker.createProfile(
+        BlockProfile(
+          // The creation time is unique enough as an id.
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: name.trim(),
+          appIdentifiers: [],
+        ),
+      );
       profilesChanged.value++;
       await _loadProfiles();
     } catch (error) {
@@ -57,69 +77,10 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
     }
   }
 
-  Future<String?> _showNameProfileDialog(BuildContext context) async {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter Profile Name'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'e.g. Study'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildList() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-
-    if (profiles.isEmpty) {
-      return Center(
-        child: Text(
-          'No profiles yet.\nTap "Create Profile" to add one.',
-          textAlign: TextAlign.center,
-          style: AppFonts.manrope(size: 14, color: AppColors.lightbrown),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: profiles.length,
-      itemBuilder: (context, index) {
-        final profile = profiles[index];
-        final meta = metaFor(profile.id);
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            leading: Icon(meta.icon),
-            title: Text(profile.name),
-            subtitle: Text('${profile.appIdentifiers.length} apps blocked'),
-            onTap: () async {
-              await context.push(
-                '/settings/focus-profiles/detail',
-                extra: profile,
-              );
-              await _loadProfiles();
-            },
-          ),
-        );
-      },
-    );
+  /// Opens the detail page and reloads afterwards (it may have been renamed or deleted).
+  Future<void> _openProfile(BlockProfile profile) async {
+    await context.push('/settings/focus-profiles/detail', extra: profile);
+    await _loadProfiles();
   }
 
   @override
@@ -136,18 +97,7 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () async {
-                    final name = await _showNameProfileDialog(context);
-                    if (name == null || name.trim().isEmpty) return;
-
-                    await _createProfile(
-                      BlockProfile(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        name: name.trim(),
-                        appIdentifiers: [],
-                      ),
-                    );
-                  },
+                  onPressed: _onCreatePressed,
                   child: const Text('Create Profile'),
                 ),
               ),
@@ -155,6 +105,40 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildList() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+
+    if (_profiles.isEmpty) {
+      return Center(
+        child: Text(
+          'No profiles yet.\nTap "Create Profile" to add one.',
+          textAlign: TextAlign.center,
+          style: AppFonts.manrope(size: 14, color: context.palette.muted),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _profiles.length,
+      itemBuilder: (context, index) {
+        final profile = _profiles[index];
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
+            leading: Icon(metaFor(profile.id).icon),
+            title: Text(profile.name),
+            subtitle: Text('${profile.appIdentifiers.length} apps blocked'),
+            onTap: () => _openProfile(profile),
+          ),
+        );
+      },
     );
   }
 }

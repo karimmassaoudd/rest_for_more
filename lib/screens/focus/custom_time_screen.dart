@@ -1,13 +1,21 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/focus/custom_preset_tile.dart';
+import '../../widgets/focus/time_wheel.dart';
 
+/// Lets the user add and remove their own timer presets,
+/// using an hours / minutes scroll wheel.
+///
+/// Receives the current custom presets from the timer screen and always
+/// returns the (possibly edited) list when closed, whether through the
+/// back arrow or the system back gesture.
 class CustomTimePage extends StatefulWidget {
-  final List<int> customPresets;
-
   const CustomTimePage({super.key, required this.customPresets});
+
+  /// Durations in minutes.
+  final List<int> customPresets;
 
   @override
   State<CustomTimePage> createState() => _CustomTimePageState();
@@ -37,6 +45,7 @@ class _CustomTimePageState extends State<CustomTimePage> {
     super.dispose();
   }
 
+  /// Adds the time on the wheels as a preset (skips 0 and duplicates).
   void _addCurrentSelectedTime() {
     final totalMinutes = (_selectedHours * 60) + _selectedMinutes;
     if (totalMinutes == 0) return;
@@ -53,29 +62,8 @@ class _CustomTimePageState extends State<CustomTimePage> {
     setState(() => _presets.remove(minutes));
   }
 
-  Widget _buildWheel({
-    required FixedExtentScrollController controller,
-    required int count,
-    required String suffix,
-    required ValueChanged<int> onChanged,
-  }) {
-    return Expanded(
-      child: CupertinoPicker(
-        itemExtent: 40,
-        scrollController: controller,
-        onSelectedItemChanged: onChanged,
-        children: List.generate(
-          count,
-          (index) => Center(
-            child: Text(
-              '$index $suffix',
-              style: AppFonts.manrope(size: 20, weight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// Closes the page and hands the presets back to the timer screen.
+  void _close() => Navigator.pop(context, _presets);
 
   @override
   Widget build(BuildContext context) {
@@ -83,101 +71,31 @@ class _CustomTimePageState extends State<CustomTimePage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) Navigator.pop(context, _presets);
+        if (!didPop) _close();
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.palette.background,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.arrow_back,
               size: 25,
-              color: AppColors.mediumbrown,
+              color: context.palette.accent,
             ),
-            onPressed: () => Navigator.pop(context, _presets),
+            onPressed: _close,
           ),
           title: Text(
             'Custom Timer',
-            style: AppFonts.montserrat(size: 15, color: AppColors.mediumbrown),
+            style: AppFonts.montserrat(size: 15, color: context.palette.accent),
           ),
         ),
         body: SafeArea(
           child: Column(
             children: [
-              Expanded(
-                flex: 7,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Scroll to set time:',
-                        style: AppFonts.montserrat(
-                          size: 14,
-                          color: AppColors.lightbrown,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        height: 180,
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            _buildWheel(
-                              controller: _hoursController,
-                              count: 24,
-                              suffix: 'h',
-                              onChanged: (i) =>
-                                  setState(() => _selectedHours = i),
-                            ),
-                            _buildWheel(
-                              controller: _minutesController,
-                              count: 60,
-                              suffix: 'min',
-                              onChanged: (i) =>
-                                  setState(() => _selectedMinutes = i),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton.icon(
-                            onPressed: _addCurrentSelectedTime,
-                            icon: const Icon(
-                              Icons.add,
-                              color: AppColors.background,
-                            ),
-                            label: Text(
-                              'Add Preset',
-                              style: AppFonts.manrope(
-                                size: 16,
-                                weight: FontWeight.w600,
-                                color: AppColors.background,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Divider(
-                color: AppColors.lightbrown,
-                indent: 24,
-                endIndent: 24,
-              ),
+              Expanded(flex: 7, child: Center(child: _buildPicker())),
+              Divider(color: context.palette.muted, indent: 24, endIndent: 24),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
@@ -187,74 +105,100 @@ class _CustomTimePageState extends State<CustomTimePage> {
                     'Your Custom Presets:',
                     style: AppFonts.montserrat(
                       size: 14,
-                      color: AppColors.lightbrown,
+                      color: context.palette.muted,
                     ),
                   ),
                 ),
               ),
-              Expanded(
-                flex: 2,
-                child: _presets.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No custom presets added yet.',
-                          style: AppFonts.montserrat(
-                            size: 13,
-                            color: AppColors.lightbrown,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        itemCount: _presets.length,
-                        itemBuilder: (context, index) {
-                          final mins = _presets[index];
-                          final hours = mins ~/ 60;
-                          final rest = mins % 60;
-                          final label = hours > 0
-                              ? '${hours}h ${rest}m'
-                              : '$mins Min';
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  label,
-                                  style: AppFonts.manrope(
-                                    size: 16,
-                                    weight: FontWeight.w600,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: AppColors.mediumbrown,
-                                  ),
-                                  onPressed: () => _removePreset(mins),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-              ),
+              Expanded(flex: 2, child: _buildPresetList()),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// The hours / minutes wheels and the "Add Preset" button.
+  Widget _buildPicker() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Scroll to set time:',
+          style: AppFonts.montserrat(size: 14, color: context.palette.muted),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          height: 180,
+          margin: EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: context.palette.surface,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TimeWheel(
+                  controller: _hoursController,
+                  count: 24,
+                  suffix: 'h',
+                  onChanged: (i) => setState(() => _selectedHours = i),
+                ),
+              ),
+              Expanded(
+                child: TimeWheel(
+                  controller: _minutesController,
+                  count: 60,
+                  suffix: 'min',
+                  onChanged: (i) => setState(() => _selectedMinutes = i),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _addCurrentSelectedTime,
+              icon: Icon(Icons.add, color: context.palette.onAccent),
+              label: Text(
+                'Add Preset',
+                style: AppFonts.manrope(
+                  size: 16,
+                  weight: FontWeight.w600,
+                  color: context.palette.onAccent,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPresetList() {
+    if (_presets.isEmpty) {
+      return Center(
+        child: Text(
+          'No custom presets added yet.',
+          style: AppFonts.montserrat(size: 13, color: context.palette.muted),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      itemCount: _presets.length,
+      itemBuilder: (context, index) {
+        final minutes = _presets[index];
+        return CustomPresetTile(
+          minutes: minutes,
+          onDelete: () => _removePreset(minutes),
+        );
+      },
     );
   }
 }

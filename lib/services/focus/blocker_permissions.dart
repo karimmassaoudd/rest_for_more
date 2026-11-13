@@ -1,8 +1,13 @@
 import 'package:flutter/services.dart';
 
-/// Asks the app_blocker plugin (Android) which of its two permissions are on,
-/// and opens the settings page for each one separately.
+/// Android only: asks our app_blocker plugin which of its two permissions
+/// are on, and opens the settings page for each one separately.
+///
+/// The plugin's own permission check only says "granted or not";
+/// this lets BlockingService explain each step to the user.
 class BlockerPermissions {
+  BlockerPermissions._();
+
   static const _channel = MethodChannel('com.khanhtq.app_blocker/methods');
 
   /// The Settings → Accessibility switch for Rest For More.

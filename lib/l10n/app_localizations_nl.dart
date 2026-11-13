@@ -10,7 +10,20 @@ class AppLocalizationsNl extends AppLocalizations {
   AppLocalizationsNl([String locale = 'nl']) : super(locale);
 
   @override
-  String get welcomeTitle => 'Welkom bij Rest For More';
+  String get welcomeTitle => 'Welkom bij\nRest For More';
+
+  @override
+  String get welcomeSubtitle =>
+      'Leg je telefoon weg en bouw rustige routines.\nEen RestNest is optioneel.';
+
+  @override
+  String get welcomeGetStarted => 'Aan de slag';
+
+  @override
+  String get welcomeHaveAccount => 'Heb je al een account?';
+
+  @override
+  String get welcomeLogIn => 'Inloggen';
 
   @override
   String get languageTitle => 'Kies je taal';
@@ -58,4 +71,91 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get tutorialBack => 'Terug';
+
+  @override
+  String get tutorialDone => 'Klaar';
+
+  @override
+  String get profileHelp => 'Hulp';
+
+  @override
+  String get profileManual => 'Zo werkt Rest For More';
+
+  @override
+  String get profileLanguageDone => 'Gereed';
+
+  @override
+  String get profileTitle => 'Profiel';
+
+  @override
+  String get profileAppearance => 'Weergave';
+
+  @override
+  String get profileLanguage => 'Taal';
+
+  @override
+  String get profileChooseLanguage => 'Kies je taal';
+
+  @override
+  String get profileYourData => 'Jouw gegevens';
+
+  @override
+  String get profileAccount => 'Account';
+
+  @override
+  String get profileGuestTitle => 'Je gebruikt Rest For More als gast';
+
+  @override
+  String get profileGuestDescription =>
+      'Je gegevens worden alleen op deze telefoon opgeslagen.';
+
+  @override
+  String get profileCreateAccount =>
+      'Account aanmaken om je gegevens te bewaren';
+
+  @override
+  String get profileLogin => 'Inloggen';
+
+  @override
+  String get profileLogout => 'Uitloggen';
+
+  @override
+  String get profileLogoutTitle => 'Uitloggen?';
+
+  @override
+  String get profileLogoutMessage =>
+      'Je focusprofielen en routines blijven op deze telefoon staan.';
+
+  @override
+  String get profileDelete => 'Account verwijderen';
+
+  @override
+  String get profileDeleteTitle => 'Je account verwijderen?';
+
+  @override
+  String get profileDeleteMessage =>
+      'Je account en back-upgegevens worden permanent verwijderd. Dit kan niet ongedaan worden gemaakt.';
+
+  @override
+  String get profileBackup => 'Maak een back-up van mijn gegevens';
+
+  @override
+  String get profileLastBackup => 'Laatste back-up: nooit';
+
+  @override
+  String get profileComingSoon => 'Binnenkort beschikbaar';
+
+  @override
+  String get profileAppearanceLight => 'Licht';
+
+  @override
+  String get profileAppearanceDark => 'Donker';
+
+  @override
+  String get profileAppearanceSystem => 'Systeem';
+
+  @override
+  String profileAppearanceSemantics(Object selected) {
+    return 'Weergave: $selected. Binnenkort beschikbaar';
+  }
 }

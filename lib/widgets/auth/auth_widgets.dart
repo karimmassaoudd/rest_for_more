@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../theme/app_colors.dart';
-import '../../../../theme/app_fonts.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+// Re-exported so screens that import this file also get CodeInput.
+export 'code_input.dart';
 
-/// Shared building blocks for the account screens (Figma Sprint 4, 1–4).
+// Shared building blocks for the account screens:
+// create account, log in and verify email.
 
-/// Muted red from the error states in the wireframe.
-const authErrorRed = Color(0xFFB0473A);
-const _fieldBorder = Color(0xFFE0D6C8);
-const _fieldFill = Colors.white;
-
-/// Page layout: back button + Cormorant title, centred subtitle,
+/// Page layout: back button + Cormorant title, optional subtitle,
 /// scrollable form, one primary button at the bottom, small footer link.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
@@ -28,19 +27,28 @@ class AuthScaffold extends StatelessWidget {
   });
 
   final String title;
+
+  /// Centred, small grey text under the title.
   final Widget? subtitle;
+
+  /// The form fields.
   final List<Widget> children;
   final String primaryLabel;
   final VoidCallback? onPrimary;
+
+  /// Shows a spinner in the primary button and disables it.
   final bool loading;
+
+  /// Shown under the primary button, e.g. [AuthFooterLink].
   final Widget? footer;
   final bool titleCentered;
 
-  /// Optional widget at the right of the title row (e.g. LanguageToggle).
+  /// Optional widget at the right of the title row (e.g. a language toggle).
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -61,15 +69,16 @@ class AuthScaffold extends StatelessWidget {
                       style: AppFonts.cormorant(
                         size: 30,
                         weight: FontWeight.w600,
+                        color: palette.text,
                       ),
                     ),
                   ),
                   if (trailing != null) ...[
                     const SizedBox(width: 12),
                     trailing!,
-                  ]
-                  // keeps a centred title really centred
-                  else if (titleCentered)
+                  ] else if (titleCentered)
+                    // Same width as the back button + gap, so a centred
+                    // title is centred on the screen, not in the leftover space.
                     const SizedBox(width: 52),
                 ],
               ),
@@ -77,10 +86,7 @@ class AuthScaffold extends StatelessWidget {
                 const SizedBox(height: 16),
                 DefaultTextStyle(
                   textAlign: TextAlign.center,
-                  style: AppFonts.manrope(
-                    size: 13,
-                    color: AppColors.lightbrown,
-                  ),
+                  style: AppFonts.manrope(size: 13, color: palette.muted),
                   child: subtitle!,
                 ),
               ],
@@ -115,6 +121,7 @@ class AuthBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Semantics(
       button: true,
       label: 'Back',
@@ -126,21 +133,17 @@ class AuthBackButton extends StatelessWidget {
           height: 36,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: _fieldBorder),
+            border: Border.all(color: palette.border),
           ),
-          child: const Icon(
-            Icons.arrow_back,
-            size: 18,
-            color: AppColors.darkbrown,
-          ),
+          child: Icon(Icons.arrow_back, size: 18, color: palette.text),
         ),
       ),
     );
   }
 }
 
-/// Full-width brown button; shows a small spinner and is disabled while busy
-/// (prevents double accounts from double taps, REST-98).
+/// Full-width brown button. While [loading] it shows a small spinner and
+/// can't be tapped, so a double tap can't create two accounts.
 class AuthPrimaryButton extends StatelessWidget {
   const AuthPrimaryButton({
     super.key,
@@ -155,18 +158,19 @@ class AuthPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return SizedBox(
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
         onPressed: loading ? null : onPressed,
         child: loading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 20,
                 height: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: AppColors.lightbrown,
+                  color: palette.onAccent,
                 ),
               )
             : Text(label),
@@ -175,7 +179,8 @@ class AuthPrimaryButton extends StatelessWidget {
   }
 }
 
-/// Label + white rounded field + optional red error under it.
+/// Bold label, white rounded field, and the error in red under it.
+/// Password fields get a show / hide button and no autocorrect.
 class AuthTextField extends StatefulWidget {
   const AuthTextField({
     super.key,
@@ -195,6 +200,8 @@ class AuthTextField extends StatefulWidget {
   final String label;
   final String hint;
   final TextEditingController controller;
+
+  /// Shown under the field and turns its border red; null = no error.
   final String? errorText;
   final TextInputType? keyboardType;
   final bool isPassword;
@@ -209,16 +216,12 @@ class AuthTextField extends StatefulWidget {
 }
 
 class _AuthTextFieldState extends State<AuthTextField> {
+  /// Password fields start hidden.
   bool _hidden = true;
-
-  OutlineInputBorder _border(Color color, [double width = 1]) =>
-      OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: color, width: width),
-      );
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final hasError = widget.errorText != null;
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
@@ -227,7 +230,11 @@ class _AuthTextFieldState extends State<AuthTextField> {
         children: [
           Text(
             widget.label,
-            style: AppFonts.manrope(size: 12, weight: FontWeight.w700),
+            style: AppFonts.manrope(
+              size: 12,
+              weight: FontWeight.w700,
+              color: palette.text,
+            ),
           ),
           const SizedBox(height: 6),
           TextField(
@@ -241,17 +248,16 @@ class _AuthTextFieldState extends State<AuthTextField> {
             textInputAction: widget.textInputAction,
             textCapitalization: widget.textCapitalization,
             onSubmitted: widget.onSubmitted,
-            style: AppFonts.manrope(size: 15),
+            style: AppFonts.manrope(size: 15, color: palette.text),
             decoration: InputDecoration(
               hintText: widget.hint,
-              filled: true,
-              fillColor: _fieldFill,
-              enabledBorder: _border(hasError ? authErrorRed : _fieldBorder),
-              disabledBorder: _border(_fieldBorder),
-              focusedBorder: _border(
-                hasError ? authErrorRed : AppColors.mediumbrown,
-                1.5,
-              ),
+              // Red outline while there's an error; the text sits below.
+              enabledBorder: hasError
+                  ? Theme.of(context).inputDecorationTheme.errorBorder
+                  : null,
+              focusedBorder: hasError
+                  ? Theme.of(context).inputDecorationTheme.focusedErrorBorder
+                  : null,
               suffixIcon: widget.isPassword
                   ? IconButton(
                       tooltip: _hidden ? 'Show password' : 'Hide password',
@@ -260,7 +266,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
                         size: 20,
-                        color: AppColors.lightbrown,
+                        color: palette.muted,
                       ),
                       onPressed: () => setState(() => _hidden = !_hidden),
                     )
@@ -280,6 +286,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
 /// Small red message under a field or the code boxes.
 class AuthErrorText extends StatelessWidget {
   const AuthErrorText(this.message, {super.key, this.center = false});
+
   final String message;
   final bool center;
 
@@ -290,7 +297,7 @@ class AuthErrorText extends StatelessWidget {
       child: Text(
         message,
         textAlign: center ? TextAlign.center : TextAlign.start,
-        style: AppFonts.manrope(size: 12, color: authErrorRed),
+        style: AppFonts.manrope(size: 12, color: AppColors.error),
       ),
     );
   }
@@ -307,133 +314,33 @@ class AuthFooterLink extends StatelessWidget {
 
   final String text;
   final String linkText;
+
+  /// Null disables the link (e.g. while loading).
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Wrap(
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Text(text, style: AppFonts.manrope(size: 13)),
+        Text(text, style: AppFonts.manrope(size: 13, color: palette.text)),
         TextButton(
           onPressed: onTap,
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             minimumSize: const Size(0, 36),
-            foregroundColor: AppColors.darkbrown,
-            textStyle: AppFonts.manrope(size: 13, weight: FontWeight.w700),
+            foregroundColor: palette.text,
+            textStyle: AppFonts.manrope(
+              size: 13,
+              weight: FontWeight.w700,
+              color: palette.text,
+            ),
           ),
           child: Text(linkText),
         ),
       ],
-    );
-  }
-}
-
-/// Six boxes for the email code. One hidden TextField does the typing,
-/// so paste and Android's one-time-code autofill work.
-class CodeInput extends StatefulWidget {
-  const CodeInput({
-    super.key,
-    required this.controller,
-    this.hasError = false,
-    this.onCompleted,
-    this.enabled = true,
-  });
-
-  final TextEditingController controller;
-  final bool hasError;
-  final ValueChanged<String>? onCompleted;
-  final bool enabled;
-
-  static const length = 6;
-
-  @override
-  State<CodeInput> createState() => _CodeInputState();
-}
-
-class _CodeInputState extends State<CodeInput> {
-  final _focus = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onChanged);
-    _focus.addListener(() => setState(() {}));
-  }
-
-  void _onChanged() {
-    setState(() {});
-    final code = widget.controller.text;
-    if (code.length == CodeInput.length) widget.onCompleted?.call(code);
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onChanged);
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final code = widget.controller.text;
-    return GestureDetector(
-      onTap: () => _focus.requestFocus(),
-      child: Stack(
-        children: [
-          // Invisible field that receives the keyboard input.
-          Opacity(
-            opacity: 0,
-            child: SizedBox(
-              height: 52,
-              child: TextField(
-                controller: widget.controller,
-                focusNode: _focus,
-                autofocus: true,
-                enabled: widget.enabled,
-                keyboardType: TextInputType.number,
-                maxLength: CodeInput.length,
-                autofillHints: const [AutofillHints.oneTimeCode],
-                showCursor: false,
-                decoration: const InputDecoration(counterText: ''),
-              ),
-            ),
-          ),
-          Semantics(
-            label: '6-digit code, ${code.length} of 6 entered',
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(CodeInput.length, (i) {
-                final filled = i < code.length;
-                final active = _focus.hasFocus && i == code.length;
-                return Container(
-                  width: 46,
-                  height: 52,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: _fieldFill,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: widget.hasError
-                          ? authErrorRed
-                          : active
-                          ? AppColors.mediumbrown
-                          : _fieldBorder,
-                      width: active ? 1.5 : 1,
-                    ),
-                  ),
-                  child: Text(
-                    filled ? code[i] : '',
-                    style: AppFonts.manrope(size: 20, weight: FontWeight.w600),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

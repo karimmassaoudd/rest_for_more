@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// One tappable row on a settings page: icon, title, optional subtitle, chevron.
+/// One tappable row on a settings page: icon, title, optional subtitle
+/// and a chevron. Colours and text styles come from the app's card and
+/// list tile themes.
 class SettingsTile extends StatelessWidget {
   const SettingsTile({
     super.key,
@@ -19,8 +21,8 @@ class SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      clipBehavior:
-          Clip.antiAlias, // keeps the tap ripple inside the rounded corners
+      // Keeps the tap ripple inside the rounded corners.
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         leading: Icon(icon, size: 28),

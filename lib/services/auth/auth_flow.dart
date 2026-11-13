@@ -16,10 +16,15 @@ enum AuthNext {
 /// Which flow the "Check your email" screen is finishing.
 enum VerifyMode { signUp, signIn }
 
-/// Thrown when Clerk answered without an error but the user is not signed in
-/// (e.g. the code was not accepted).
+/// Thrown when Clerk answered without an error but the user is still not
+/// signed in (e.g. the code was not accepted).
 class AuthIncomplete implements Exception {
   const AuthIncomplete([this.detail = '']);
+
+  /// [detail] when the 6-digit code was rejected; auth_errors.dart
+  /// turns this into "Wrong code, try again".
+  static const codeNotAccepted = 'code not accepted';
+
   final String detail;
 
   @override
@@ -41,19 +46,20 @@ class AuthFlow {
   Future<ClerkAuthState> _auth() =>
       AuthService.instance.state.timeout(const Duration(seconds: 15));
 
-  /// REST-98: create the account; Clerk sends the email code.
+  /// Creates the account; Clerk then emails a 6-digit code.
+  /// [name] is stored as the Clerk first name.
   Future<AuthNext> signUp({
-    String? name,
+    required String name,
     required String email,
     required String password,
   }) async {
     final auth = await _auth();
     await auth.attemptSignUp(
       strategy: clerk.Strategy.emailCode,
-      firstName: (name == null || name.isEmpty) ? null : name,
+      firstName: name,
       emailAddress: email,
       password: password,
-      passwordConfirmation: password, // design has one password field
+      passwordConfirmation: password,
     );
 
     if (auth.isSignedIn) return AuthNext.signedIn;
@@ -66,7 +72,7 @@ class AuthFlow {
     throw AuthIncomplete('missing ${signUp?.missingFields}');
   }
 
-  /// REST-99 (and the extra device check on log-in): check the 6-digit code.
+  /// Checks the 6-digit code, after sign-up or after the extra device check on log-in.
   Future<void> verifyCode(VerifyMode mode, String code) async {
     final auth = await _auth();
     switch (mode) {
@@ -81,7 +87,9 @@ class AuthFlow {
           code: code,
         );
     }
-    if (!auth.isSignedIn) throw const AuthIncomplete('code not accepted');
+    if (!auth.isSignedIn) {
+      throw const AuthIncomplete(AuthIncomplete.codeNotAccepted);
+    }
   }
 
   /// "Resend code" on the Check your email screen.
@@ -90,7 +98,7 @@ class AuthFlow {
     await auth.resendCode(clerk.Strategy.emailCode);
   }
 
-  /// REST-100: log in with email and password.
+  /// Logs in with email and password.
   Future<AuthNext> logIn({
     required String email,
     required String password,
@@ -113,16 +121,16 @@ class AuthFlow {
     throw AuthIncomplete('sign-in status ${auth.signIn?.status}');
   }
 
-  /// REST-101: log out. Only the Clerk session ends; focus profiles,
+  /// Logs out. Only the Clerk session ends; focus profiles,
   /// routines and a running focus session stay on the phone.
   Future<void> signOut() async {
     final auth = await _auth();
     await auth.signOut();
   }
 
-  /// Story 8 (Delete account): removes the Clerk user.
+  /// Deletes the Clerk user.
   /// Needs "Allow users to delete their account" on in the Clerk dashboard.
-  /// Later (story 14): also delete the user's rows in the database.
+  /// Once there is a database, the user's rows must be deleted here too.
   Future<void> deleteAccount() async {
     final auth = await _auth();
     await auth.deleteUser();

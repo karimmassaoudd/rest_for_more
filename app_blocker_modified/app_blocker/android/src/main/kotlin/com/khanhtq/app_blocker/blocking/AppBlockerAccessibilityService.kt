@@ -119,16 +119,19 @@ class AppBlockerAccessibilityService : AccessibilityService() {
     // ------------------------------------------------------------------
 
     /**
-     * Re-evaluates [lastPackage] against the current blocking state.
-     * Called by [BlockingServiceManager] after blocking is activated so that
-     * an app already in the foreground is blocked immediately without waiting
-     * for the next accessibility event (e.g. when a schedule starts).
+     * Blocks the app that is on screen right now, if it is blocked.
+     * Called by [BlockingServiceManager] right after blocking switches on,
+     * so an app that is already open (e.g. when a schedule starts) is
+     * blocked without waiting for the next window change.
+     *
+     * Uses the real foreground window, not [lastPackage]: when a session is
+     * started from our own app, [lastPackage] still holds the app used
+     * before it, which would wrongly be blocked.
      */
     fun checkCurrentForegroundApp() {
-        val pkg = lastPackage
-        if (pkg.isNotEmpty()) {
-            checkAndBlock(pkg)
-        }
+        val pkg = foregroundPackage() ?: currentPackage
+        if (pkg.isEmpty() || pkg == packageName || pkg == SYSTEM_UI_PACKAGE) return
+        checkAndBlock(pkg)
     }
 
     /** Called by [BreakEndReceiver] when Android's break-end alarm fires. */
@@ -153,7 +156,12 @@ class AppBlockerAccessibilityService : AccessibilityService() {
 
         // Events from our own package (the host Flutter app and BlockedAppActivity)
         // must never trigger a block — the block screen IS our package.
-        if (packageName == this.packageName) return
+        if (packageName == this.packageName) {
+            // Back in our own app: forget the last app, so opening any app
+            // after this (even the same one as before) is checked again.
+            lastPackage = ""
+            return
+        }
 
         if (packageName == lastPackage) return
 

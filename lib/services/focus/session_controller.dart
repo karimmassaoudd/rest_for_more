@@ -3,12 +3,18 @@ import 'dart:async';
 import 'package:app_blocker/app_blocker.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../models/focus/pause_rules.dart';
 import 'blocking_service.dart';
+import 'keep_timer_running.dart';
 import 'session_store.dart';
 import 'timer_notification_service.dart';
-import '../../models/focus/pause_rules.dart';
-import 'keep_timer_running.dart';
 
+/// All logic behind the timer screen for one [profile]: choosing a duration,
+/// starting and stopping the session, breaks, and the countdown itself.
+///
+/// The saved end time in [SessionStore] is the source of truth, so the timer
+/// stays correct when the app is closed or the phone is locked.
+/// The screen listens to this controller and redraws when it notifies.
 class SessionController extends ChangeNotifier {
   SessionController({required this.profile});
 
@@ -18,20 +24,20 @@ class SessionController extends ChangeNotifier {
   final _blocking = BlockingService();
   final _session = SessionStore();
   final _alerts = TimerNotificationService.instance;
-  int pausesAllowed = 0;
-  int pausesUsed = 0;
-  int _breakEnd = 0;
-  bool _wasOnBreak = false;
 
-  /// Called when the timer reaches zero while this page is open.
+  /// Called when the timer reaches zero while the timer screen is open.
   VoidCallback? onFinished;
 
-  // State the screen reads
+  // ---------- state the screen reads ----------
+
   int totalMillis = defaultMillis;
   int remainingMillis = defaultMillis;
   bool isRunning = false;
   bool hasStarted = false;
   List<int> customPresets = [];
+  int pausesAllowed = 0;
+  int pausesUsed = 0;
+
   int get pausesLeft => pausesAllowed - pausesUsed;
   bool get isOnBreak => _breakEnd > DateTime.now().millisecondsSinceEpoch;
   int get breakLeftMillis {
@@ -41,8 +47,12 @@ class SessionController extends ChangeNotifier {
 
   bool get canPause => isRunning && !isOnBreak && pausesLeft > 0;
 
+  // ---------- internal state ----------
+
   Timer? _timer;
   int _endAt = 0;
+  int _breakEnd = 0;
+  bool _wasOnBreak = false;
   int _shownSecond = -1;
   bool _disposed = false;
   bool _starting = false;
@@ -60,6 +70,8 @@ class SessionController extends ChangeNotifier {
 
   // ---------- loading and saving ----------
 
+  /// Reads the saved state: continues a running session, or shows the
+  /// last chosen duration and cleans up anything left over.
   Future<void> load() async {
     try {
       if (await _alerts.isRinging()) await _alerts.cancelAll();
@@ -105,6 +117,7 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Saves the chosen duration and the custom presets (not the session).
   Future<void> save() async {
     try {
       await _session.saveTimerSettings(
@@ -134,6 +147,7 @@ class SessionController extends ChangeNotifier {
     pausesAllowed = await _session.pausesAllowed();
   }
 
+  /// Focus time left; during a break it stays frozen at the break's end.
   int _remainingNow() {
     final now = DateTime.now().millisecondsSinceEpoch;
     return _endAt - (_breakEnd > now ? _breakEnd : now);
@@ -148,7 +162,8 @@ class SessionController extends ChangeNotifier {
   // ---------- actions ----------
 
   /// Starts the session. Permission must already be granted.
-  /// Returns false if it could not start.
+  /// Returns false if it could not start (everything is undone then).
+  // Future<bool> start() async {
   Future<bool> start() async {
     if (remainingMillis <= 0) return false;
     if (_starting) return false;
@@ -176,6 +191,7 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Starts a break of [kBreakMinutes]; the session end moves back by as much.
   Future<void> startBreak() async {
     if (!canPause) return;
     try {
@@ -195,6 +211,7 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Ends the session early and unblocks the apps.
   void stop() {
     _timer?.cancel();
     isRunning = false;
@@ -206,6 +223,7 @@ class SessionController extends ChangeNotifier {
     _resetBreakState();
   }
 
+  /// Picks a duration (only before the session starts).
   void selectPreset(int minutes) {
     _timer?.cancel();
     isRunning = false;
@@ -221,8 +239,10 @@ class SessionController extends ChangeNotifier {
     save();
   }
 
-  // ---------- internals ----------
+  // ---------- countdown ----------
 
+  /// Ticks 4× per second, but only redraws when the visible second changes.
+  /// Handles the end of a break and the end of the session.
   void _runTimer() {
     if (remainingMillis <= 0) return;
 
@@ -251,11 +271,12 @@ class SessionController extends ChangeNotifier {
             : (remainingMillis / 1000).ceil();
         if (second != _shownSecond) {
           _shownSecond = second;
-          _notify(); // redraw only when the visible second changes
+          _notify();
         }
         return;
       }
 
+      // Time is up.
       _timer?.cancel();
       isRunning = false;
       hasStarted = false;

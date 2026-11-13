@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../theme/app_colors.dart';
-import '../../../../theme/app_fonts.dart';
-import '../../../../widgets/auth/auth_widgets.dart';
+import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/auth/auth_widgets.dart';
 
-/// Onboarding part 1: a few optional questions for general statistics.
+/// Onboarding step 2: a few optional questions for general statistics.
 /// Every question can be left empty, and the whole screen can be skipped.
 /// (The 14-day plan questionnaire is a separate flow, started later.)
 ///
-/// TODO: store the answers locally (age band, goal, RestNest) — no date of
-/// birth or free text (client doc 05: minimal data).
+/// TODO: store the answers locally or later in database (age band, goal, RestNest). Only these
+/// choices, no date of birth or free text, to keep personal data minimal.
 class QuestionsScreen extends StatefulWidget {
   const QuestionsScreen({super.key});
 
@@ -19,9 +19,10 @@ class QuestionsScreen extends StatefulWidget {
 }
 
 class _QuestionsScreenState extends State<QuestionsScreen> {
-  // Age bands, no date of birth (client doc 03).
+  /// Age bands instead of a date of birth.
   static const _ages = ['Under 16', '16–24', '25–39', '40–59', '60+'];
-  // The three primary goals from client doc 03.
+
+  /// The three main goals the app supports.
   static const _goals = [
     'Put my phone away earlier',
     'Build a calm routine',
@@ -33,10 +34,12 @@ class _QuestionsScreenState extends State<QuestionsScreen> {
   String? _goal;
   String? _hasRestNest;
 
+  /// Continue and Skip do the same for now, because nothing is saved yet.
   void _next() => context.push('/onboarding/tutorial');
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return AuthScaffold(
       title: 'A few questions',
       subtitle: const Text('All optional. Skip any you like.'),
@@ -47,7 +50,7 @@ class _QuestionsScreenState extends State<QuestionsScreen> {
         child: TextButton(
           onPressed: _next,
           style: TextButton.styleFrom(
-            foregroundColor: AppColors.darkbrown,
+            foregroundColor: palette.text,
             textStyle: AppFonts.manrope(size: 14, weight: FontWeight.w600),
           ),
           child: const Text('Skip'),
@@ -90,10 +93,13 @@ class _Question extends StatelessWidget {
   final String title;
   final List<String> options;
   final String? selected;
+
+  /// Called with the tapped answer, or null when it was unselected.
   final ValueChanged<String?> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -101,7 +107,11 @@ class _Question extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppFonts.cormorant(size: 22, weight: FontWeight.w600),
+            style: AppFonts.cormorant(
+              size: 22,
+              weight: FontWeight.w600,
+              color: palette.text,
+            ),
           ),
           const SizedBox(height: 10),
           Wrap(
@@ -117,16 +127,12 @@ class _Question extends StatelessWidget {
                   labelStyle: AppFonts.manrope(
                     size: 14,
                     weight: FontWeight.w600,
-                    color: selected == option
-                        ? AppColors.background
-                        : AppColors.darkbrown,
+                    color: selected == option ? palette.onAccent : palette.text,
                   ),
-                  backgroundColor: Colors.white,
-                  selectedColor: AppColors.mediumbrown,
+                  backgroundColor: palette.surface,
+                  selectedColor: palette.accent,
                   side: BorderSide(
-                    color: selected == option
-                        ? AppColors.mediumbrown
-                        : AppColors.surface,
+                    color: selected == option ? palette.accent : palette.border,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),

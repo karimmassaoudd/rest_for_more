@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// ● ○ ○ ○ — shows which card is visible; tapping a dot jumps to that card.
+/// ● ○ ○ ○ under a carousel: shows which card is visible,
+/// and tapping a dot jumps to that card.
 class PageDots extends StatelessWidget {
   const PageDots({
     super.key,
@@ -11,8 +12,14 @@ class PageDots extends StatelessWidget {
   });
 
   final int count;
+
+  /// Index of the visible card.
   final int active;
+
+  /// The active dot's colour; the others use it at 25 % opacity.
   final Color color;
+
+  /// Called with the tapped dot's index.
   final ValueChanged<int> onTap;
 
   @override
@@ -28,6 +35,7 @@ class PageDots extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => onTap(i),
+              // The padding makes the tap target bigger than the 8 px dot.
               child: Padding(
                 padding: const EdgeInsets.all(4),
                 child: AnimatedContainer(

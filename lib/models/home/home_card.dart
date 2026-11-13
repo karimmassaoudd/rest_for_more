@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../theme/app_colors.dart';
-
 /// Content and colours for one card in the Home carousel.
 ///
-/// The default colours give the light card (sand background, brown button).
-/// Pass other colours for variants such as the dark evening card.
+/// Built in `home_carousel_cards.dart` from the current theme, so the
+/// colours follow light/dark mode; drawn by `HomeCarouselCard`.
 class HomeCard {
   const HomeCard({
     required this.icon,
@@ -13,12 +11,12 @@ class HomeCard {
     required this.title,
     required this.buttonLabel,
     required this.onPressed,
-    this.iconColor = AppColors.lightbrown,
+    required this.iconColor,
+    required this.background,
+    required this.textColor,
+    required this.buttonColor,
+    required this.buttonTextColor,
     this.iconSize = 24,
-    this.background = AppColors.surface,
-    this.textColor = AppColors.darkbrown,
-    this.buttonColor = AppColors.mediumbrown,
-    this.buttonTextColor = AppColors.buttonText,
     this.buttonBorder,
   });
 
@@ -41,6 +39,6 @@ class HomeCard {
   final Color buttonColor;
   final Color buttonTextColor;
 
-  /// Optional outline around the button (used on the dark card).
+  /// Optional outline around the button.
   final Color? buttonBorder;
 }

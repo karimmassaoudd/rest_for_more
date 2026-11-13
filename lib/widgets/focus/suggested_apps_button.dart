@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 
+/// "Suggested Apps" button above the app list.
+/// Hands back the suggested apps that are actually installed on this phone.
 class SuggestedAppsButton extends StatelessWidget {
-  final List<String> installedPackageNames;
-  final List<String> suggestedPackageNames;
-  final ValueChanged<Set<String>> onSuggestionsSelected;
-
   const SuggestedAppsButton({
     super.key,
     required this.installedPackageNames,
     required this.suggestedPackageNames,
     required this.onSuggestionsSelected,
   });
+
+  final List<String> installedPackageNames;
+  final List<String> suggestedPackageNames;
+  final ValueChanged<Set<String>> onSuggestionsSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -19,10 +21,9 @@ class SuggestedAppsButton extends StatelessWidget {
       child: TextButton(
         onPressed: () {
           final installed = installedPackageNames.toSet();
-          final suggested = suggestedPackageNames
-              .where((id) => installed.contains(id))
-              .toSet();
-          onSuggestionsSelected(suggested);
+          onSuggestionsSelected(
+            suggestedPackageNames.where(installed.contains).toSet(),
+          );
         },
         child: const Text('Suggested Apps'),
       ),

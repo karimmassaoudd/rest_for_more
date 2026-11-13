@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../theme/app_colors.dart';
+import '../../services/focus/profile_edit_guard.dart';
 import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
 import '../../widgets/common/settings_tile.dart';
-import '../../services/focus/session_store.dart';
 
+/// The "Settings" tab: entry points for editing focus profiles and routines.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -23,7 +24,7 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Manage how Rest For More works for you',
-              style: AppFonts.cormorant(size: 15, color: AppColors.lightbrown),
+              style: AppFonts.manrope(size: 15, color: context.palette.muted),
             ),
             const SizedBox(height: 24),
             SettingsTile(
@@ -31,19 +32,8 @@ class SettingsScreen extends StatelessWidget {
               title: 'Edit profiles',
               subtitle: 'Create, rename and edit your focus profiles',
               onTap: () async {
-                if (await SessionStore().isActive()) {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context)
-                    ..hideCurrentSnackBar()
-                    ..showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Profiles can't be edited during a session. End the session first.",
-                        ),
-                      ),
-                    );
-                  return;
-                }
+                // Blocked while a focus session is running (shows a snackbar).
+                if (!await profileEditingAllowed(context)) return;
                 if (!context.mounted) return;
                 context.push('/settings/focus-profiles');
               },

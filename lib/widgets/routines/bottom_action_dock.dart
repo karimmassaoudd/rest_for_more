@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
+/// The big "Start your morning" / "Start evening" button at the bottom
+/// of the routine screen; opens focus mode for the next open step.
 class BottomActionDock extends StatelessWidget {
   const BottomActionDock({
     super.key,

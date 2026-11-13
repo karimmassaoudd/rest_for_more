@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../l10n/app_localizations.dart';
-import '../../../../services/settings/locale_controller.dart';
-import '../../../../theme/app_colors.dart';
-import '../../../../theme/app_fonts.dart';
-import '../../../../widgets/auth/auth_widgets.dart';
+import '../../l10n/app_localizations.dart';
+import '../../services/settings/locale_controller.dart';
+import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/auth/auth_widgets.dart';
 import '../../widgets/common/rfm_logo.dart';
 
-/// First screen of the app: choose English or Nederlands (Figma "Choose your
-/// language"). Tapping a language switches the whole app at once and saves
-/// the choice (LocaleController, REST-107 / REST-116).
+/// Onboarding step 1: choose English or Nederlands.
+///
+/// Tapping a language switches the whole app straight away and saves the
+/// choice (see LocaleController).
 class LanguageScreen extends StatelessWidget {
   const LanguageScreen({super.key});
-
-  /// Language code -> name. Names stay in their own language on purpose,
-  /// so people can always find theirs.
-  static const _languages = {'en': 'English', 'nl': 'Nederlands'};
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final selected = Localizations.localeOf(context).languageCode;
+    final palette = context.palette;
 
     return Scaffold(
       body: SafeArea(
@@ -36,35 +34,35 @@ class LanguageScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 24, bottom: 24),
                   child: Column(
                     children: [
-                      const ExcludeSemantics(
+                      ExcludeSemantics(
                         child: SizedBox(
                           width: 80,
                           height: 60,
                           child: FittedBox(
-                            child: RfmLogo(textColor: AppColors.mediumbrown),
+                            child: RfmLogo(textColor: palette.accent),
                           ),
                         ),
                       ),
                       const SizedBox(height: 48),
+
                       Text(
                         l10n.languageTitle,
                         textAlign: TextAlign.center,
                         style: AppFonts.cormorant(
                           size: 34,
                           weight: FontWeight.w600,
+                          color: palette.text,
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         l10n.languageSubtitle,
                         textAlign: TextAlign.center,
-                        style: AppFonts.manrope(
-                          size: 14,
-                          color: AppColors.lightbrown,
-                        ),
+                        style: AppFonts.manrope(size: 14, color: palette.muted),
                       ),
                       const SizedBox(height: 48),
-                      for (final entry in _languages.entries)
+                      for (final entry
+                          in LocaleController.languageNames.entries)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16),
                           child: _LanguageCard(
@@ -92,9 +90,11 @@ class LanguageScreen extends StatelessWidget {
   }
 }
 
-/// Selected: white + brown border + filled radio dot.
-/// Unselected: sand, no border, empty radio circle.
-/// (Selection is shown by border + dot, not by colour alone.)
+/// One language option, styled like a radio button.
+///
+/// Selected: white, brown border and a filled dot.
+/// Unselected: sand, no border and an empty circle.
+/// The border and dot show the choice, so it doesn't rely on colour alone.
 class _LanguageCard extends StatelessWidget {
   const _LanguageCard({
     required this.label,
@@ -108,14 +108,16 @@ class _LanguageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Semantics(
+      // Read out as one radio button in a group.
       inMutuallyExclusiveGroup: true,
       checked: selected,
       button: true,
       label: label,
       excludeSemantics: true,
       child: Material(
-        color: selected ? Colors.white : AppColors.surface,
+        color: selected ? palette.card : palette.surface,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -127,7 +129,7 @@ class _LanguageCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: selected ? AppColors.mediumbrown : Colors.transparent,
+                color: selected ? palette.accent : Colors.transparent,
                 width: 1.5,
               ),
             ),
@@ -136,7 +138,11 @@ class _LanguageCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: AppFonts.manrope(size: 16, weight: FontWeight.w600),
+                    style: AppFonts.manrope(
+                      size: 16,
+                      weight: FontWeight.w600,
+                      color: palette.text,
+                    ),
                   ),
                 ),
                 _RadioDot(selected: selected),
@@ -149,12 +155,15 @@ class _LanguageCard extends StatelessWidget {
   }
 }
 
+/// The round radio indicator on the right of a language card.
 class _RadioDot extends StatelessWidget {
   const _RadioDot({required this.selected});
+
   final bool selected;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Container(
       width: 22,
       height: 22,
@@ -162,17 +171,18 @@ class _RadioDot extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: selected ? AppColors.mediumbrown : AppColors.lightbrown,
+          color: selected ? palette.accent : palette.muted,
           width: 1.5,
         ),
       ),
+      // The inner dot grows in when selected.
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: selected ? 12 : 0,
         height: selected ? 12 : 0,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AppColors.mediumbrown,
+          color: palette.accent,
         ),
       ),
     );

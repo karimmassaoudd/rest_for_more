@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+/// Warning card on Home while app blocking isn't allowed yet.
+/// Tapping it asks for the permission again.
 class PermissionBanner extends StatelessWidget {
   const PermissionBanner({super.key, required this.onTap});
+
   final VoidCallback onTap;
 
   @override

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Plain Material dialog for permissions. Returns true if the user agrees.
+/// Explains why a permission is needed before the system screen opens.
+/// Returns true if the user taps [allowLabel].
+///
+/// [messageAlign]: use TextAlign.start for messages with numbered steps.
 Future<bool> showPermissionDialog(
   BuildContext context, {
   required IconData icon,

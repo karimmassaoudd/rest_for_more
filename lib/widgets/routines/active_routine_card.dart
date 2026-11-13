@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_fonts.dart';
 
+/// The card at the top of the routine screen: wake-up time (morning) or
+/// bedtime (evening), plus how many steps are done and a progress bar.
+///
+/// Note: the times shown are fixed placeholders for now; they don't
+/// follow the bedtime chosen in the routine editor yet.
 class ActiveRoutineCard extends StatelessWidget {
   const ActiveRoutineCard({
     super.key,
@@ -111,10 +117,10 @@ class ActiveRoutineCard extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               '10:30 PM',
-              style: TextStyle(
+              style: AppFonts.cormorant(
+                size: 25,
+                weight: FontWeight.w600,
                 color: palette.text,
-                fontFamily: 'serif',
-                fontSize: 25,
               ),
             ),
             const SizedBox(height: 5),

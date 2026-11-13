@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-import 'app_colors.dart';
-
-/// Cormorant Garamond: titles and big numbers
-/// Manrope: body text and buttons
-/// Montserrat: small labels, chips, navigation
+/// The three app fonts, bundled in assets/fonts (see pubspec.yaml), so
+/// they show from the first frame and work offline.
+///
+/// - Cormorant Garamond: titles and big numbers.
+/// - Manrope: body text and buttons.
+/// - Montserrat: small labels, chips and navigation.
+///
+/// Without a `color`, text takes the theme's text colour, so it follows
+/// light/dark mode by itself. Pass a colour only when it should differ.
 class AppFonts {
+  AppFonts._();
+
   static TextStyle cormorant({
     double size = 16,
     FontWeight weight = FontWeight.w500,
-    Color color = AppColors.darkbrown,
-  }) => GoogleFonts.cormorantGaramond(
+    Color? color,
+  }) => TextStyle(
+    fontFamily: 'CormorantGaramond',
     fontSize: size,
     fontWeight: weight,
     color: color,
@@ -20,13 +26,22 @@ class AppFonts {
   static TextStyle manrope({
     double size = 16,
     FontWeight weight = FontWeight.w500,
-    Color color = AppColors.darkbrown,
-  }) => GoogleFonts.manrope(fontSize: size, fontWeight: weight, color: color);
+    Color? color,
+  }) => TextStyle(
+    fontFamily: 'Manrope',
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+  );
 
   static TextStyle montserrat({
     double size = 14,
     FontWeight weight = FontWeight.w500,
-    Color color = AppColors.darkbrown,
-  }) =>
-      GoogleFonts.montserrat(fontSize: size, fontWeight: weight, color: color);
+    Color? color,
+  }) => TextStyle(
+    fontFamily: 'Montserrat',
+    fontSize: size,
+    fontWeight: weight,
+    color: color,
+  );
 }

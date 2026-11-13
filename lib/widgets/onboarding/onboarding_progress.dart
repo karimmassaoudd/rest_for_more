@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../../theme/app_colors.dart';
+import '../../theme/app_palette.dart';
 
-/// Thin progress bars for the tutorial pages ("page 2 of 4").
+/// Row of thin bars at the top of the tutorial ("page 2 of 4"): the bars up
+/// to and including [step] use the accent colour, the rest the surface.
 class OnboardingProgress extends StatelessWidget {
   const OnboardingProgress({
     super.key,
@@ -10,7 +11,8 @@ class OnboardingProgress extends StatelessWidget {
     required this.total,
   });
 
-  final int step; // 1-based
+  /// The current page, starting at 1.
+  final int step;
   final int total;
 
   @override
@@ -26,7 +28,9 @@ class OnboardingProgress extends StatelessWidget {
                 duration: const Duration(milliseconds: 250),
                 height: 4,
                 decoration: BoxDecoration(
-                  color: i <= step ? AppColors.mediumbrown : AppColors.surface,
+                  color: i <= step
+                      ? context.palette.accent
+                      : context.palette.surface,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

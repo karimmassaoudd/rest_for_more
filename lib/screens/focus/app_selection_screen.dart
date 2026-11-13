@@ -1,22 +1,17 @@
-import 'package:flutter/material.dart';
 import 'package:app_blocker/app_blocker.dart';
-
-import '../../services/focus/installed_apps_service.dart';
-
-import 'app_search_field.dart';
-import 'suggested_apps_button.dart';
-
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class AppSelectionScreen extends StatefulWidget {
-  final String title;
-  final Future<Set<String>> Function() loadInitialSelection;
-  final List<String> suggestedPackageNames;
-  final String? Function(String packageName, bool wantsSelected) validateToggle;
-  final Set<String> lockedPackageNames;
-  final Future<void> Function(Set<String> finalSelection) onSave;
-  final String? lockedReason;
+import '../../services/focus/installed_apps_service.dart'; // unchanged
+import '../../widgets/focus/app_search_field.dart'; // was 'app_search_field.dart'
+import '../../widgets/focus/suggested_apps_button.dart'; // was 'suggested_apps_button.dart'
 
+/// Shared screen for picking apps from a searchable list of installed apps.
+///
+/// Used by both Edit Blocked Apps and Edit Always Available Apps; each one
+/// passes in what is selected at first, which apps to suggest, which are
+/// locked, and how to save. Closes with `true` after a successful save.
+class AppSelectionScreen extends StatefulWidget {
   const AppSelectionScreen({
     super.key,
     required this.title,
@@ -28,15 +23,35 @@ class AppSelectionScreen extends StatefulWidget {
     this.lockedReason,
   });
 
+  final String title;
+
+  /// Package names that are ticked when the screen opens.
+  final Future<Set<String>> Function() loadInitialSelection;
+
+  /// Ticked by "Suggested Apps" (only the ones that are installed).
+  final List<String> suggestedPackageNames;
+
+  /// Returns an error message to show when a change isn't allowed,
+  /// or null when it is.
+  final String? Function(String packageName, bool wantsSelected) validateToggle;
+
+  /// Apps whose checkbox can't be changed.
+  final Set<String> lockedPackageNames;
+
+  /// Shown under locked apps.
+  final String? lockedReason;
+
+  final Future<void> Function(Set<String> finalSelection) onSave;
+
   @override
   State<AppSelectionScreen> createState() => _AppSelectionScreenState();
 }
 
 class _AppSelectionScreenState extends State<AppSelectionScreen> {
-  List<AppInfo> allApps = [];
-  List<String> installedPackageNames = [];
-  Set<String> selectedApps = {};
-  String searchQuery = '';
+  List<AppInfo> _allApps = [];
+  List<String> _installedPackageNames = [];
+  Set<String> _selectedApps = {};
+  String _searchQuery = '';
   bool _saving = false;
 
   @override
@@ -49,28 +64,23 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     try {
       final apps = await InstalledAppsService.getApps();
       final initialSelection = await widget.loadInitialSelection();
-
       if (!mounted) return;
-
       setState(() {
-        allApps = apps;
-        installedPackageNames = apps.map((app) => app.packageName).toList();
-        selectedApps = {...initialSelection};
+        _allApps = apps;
+        _installedPackageNames = apps.map((app) => app.packageName).toList();
+        _selectedApps = {...initialSelection};
       });
     } catch (error) {
       debugPrint('Loading apps failed: $error');
     }
   }
 
-  List<AppInfo> get filteredApps {
-    if (searchQuery.isEmpty) {
-      return allApps;
-    }
-    return allApps
-        .where(
-          (app) =>
-              app.appName.toLowerCase().contains(searchQuery.toLowerCase()),
-        )
+  /// Apps whose name contains the search text (case-insensitive).
+  List<AppInfo> get _filteredApps {
+    if (_searchQuery.isEmpty) return _allApps;
+    final query = _searchQuery.toLowerCase();
+    return _allApps
+        .where((app) => app.appName.toLowerCase().contains(query))
         .toList();
   }
 
@@ -78,7 +88,7 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      await widget.onSave(selectedApps);
+      await widget.onSave(_selectedApps);
       if (!mounted) return;
       context.pop(true);
     } catch (error) {
@@ -91,6 +101,7 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     }
   }
 
+  /// Ticks or unticks an app, unless [AppSelectionScreen.validateToggle] says no.
   void _toggleSelection(String packageName, bool wantsSelected) {
     final error = widget.validateToggle(packageName, wantsSelected);
     if (error != null) {
@@ -100,15 +111,27 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     }
     setState(() {
       if (wantsSelected) {
-        selectedApps.add(packageName);
+        _selectedApps.add(packageName);
       } else {
-        selectedApps.remove(packageName);
+        _selectedApps.remove(packageName);
       }
+    });
+  }
+
+  /// Ticks the suggested apps, skipping any that aren't allowed.
+  void _addSuggestions(Set<String> suggested) {
+    setState(() {
+      _selectedApps.addAll(
+        suggested.where((id) => widget.validateToggle(id, true) == null),
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Filtered once per build, not once per row.
+    final apps = _filteredApps;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -122,31 +145,19 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
       body: Column(
         children: [
           AppSearchField(
-            onSearchQueryChanged: (query) {
-              setState(() {
-                searchQuery = query;
-              });
-            },
+            onSearchQueryChanged: (query) =>
+                setState(() => _searchQuery = query),
           ),
           SuggestedAppsButton(
-            installedPackageNames: installedPackageNames,
+            installedPackageNames: _installedPackageNames,
             suggestedPackageNames: widget.suggestedPackageNames,
-            onSuggestionsSelected: (suggested) {
-              setState(() {
-                selectedApps.addAll(
-                  suggested.where(
-                    (id) => widget.validateToggle(id, true) == null,
-                  ),
-                );
-              });
-            },
+            onSuggestionsSelected: _addSuggestions,
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: filteredApps.length,
+              itemCount: apps.length,
               itemBuilder: (context, index) {
-                final app = filteredApps[index];
-                final isSelected = selectedApps.contains(app.packageName);
+                final app = apps[index];
                 final isLocked = widget.lockedPackageNames.contains(
                   app.packageName,
                 );
@@ -158,12 +169,12 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
                   secondary: app.icon != null
                       ? Image.memory(app.icon!, width: 32, height: 32)
                       : const Icon(Icons.apps),
-                  value: isSelected,
+                  value: _selectedApps.contains(app.packageName),
+                  // A null onChanged shows the checkbox as disabled.
                   onChanged: isLocked
                       ? null
-                      : (value) {
-                          _toggleSelection(app.packageName, value ?? false);
-                        },
+                      : (value) =>
+                            _toggleSelection(app.packageName, value ?? false),
                 );
               },
             ),

@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'l10n/app_localizations.dart';
+import 'router.dart';
 import 'services/auth/auth_service.dart';
-import 'services/onboarding/welcome_choice_store.dart';
-import 'services/settings/locale_controller.dart';
-
+import 'services/focus/active_focus_profile.dart';
+import 'services/focus/focus_notification_navigation.dart';
 import 'services/focus/profile_bootstrap.dart';
 import 'services/focus/timer_notification_service.dart';
-import 'services/focus/focus_notification_navigation.dart';
-import 'services/focus/active_focus_profile.dart';
-
+import 'services/onboarding/welcome_choice_store.dart';
+import 'services/settings/locale_controller.dart';
+import 'services/settings/theme_controller.dart';
 import 'theme/app_theme.dart';
-import 'router.dart';
-import 'l10n/app_localizations.dart';
 
+/// App entry point.
+///
+/// Loads everything the first screen needs before `runApp`: the saved
+/// language and theme, the notification channel, the default focus
+/// profiles and the welcome choice. Clerk sign-in starts in the
+/// background and is not awaited, so the app also opens offline.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -24,8 +28,8 @@ Future<void> main() async {
     );
   }
 
-  // Initialize global language preference.
   await LocaleController.instance.initialize();
+  await ThemeController.instance.initialize();
 
   AuthService.instance.start();
 
@@ -36,6 +40,11 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
+/// Root widget.
+///
+/// Rebuilds MaterialApp when the language or theme changes, and opens
+/// the countdown screen when the user taps the running-timer
+/// notification.
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -44,23 +53,15 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final _settings = Listenable.merge([
+    LocaleController.instance,
+    ThemeController.instance,
+  ]);
+
   @override
   void initState() {
     super.initState();
-
     FocusNotificationNavigation.instance.start(openTimer: _openActiveTimer);
-  }
-
-  Future<void> _openActiveTimer() async {
-    try {
-      final profile = await loadActiveFocusProfile();
-
-      if (!mounted || profile == null) return;
-
-      router.go('/countdown', extra: profile);
-    } catch (error) {
-      debugPrint('Failed to open active timer: $error');
-    }
   }
 
   @override
@@ -69,110 +70,33 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
+  Future<void> _openActiveTimer() async {
+    try {
+      final profile = await loadActiveFocusProfile();
+      if (!mounted || profile == null) return;
+      router.go('/countdown', extra: profile);
+    } catch (error) {
+      debugPrint('Failed to open active timer: $error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final localeController = LocaleController.instance;
-
     return ListenableBuilder(
-      listenable: localeController,
+      listenable: _settings,
       builder: (context, child) {
         return MaterialApp.router(
           title: 'Rest For More',
-          theme: buildAppTheme(),
           debugShowCheckedModeBanner: false,
-
-          // Global language setting.
-          locale: localeController.locale,
-
-          // English and Dutch.
-          supportedLocales: const [Locale('en'), Locale('nl')],
-
-          // Flutter localization support.
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-
-          // Preserve your existing navigation.
+          theme: buildAppTheme(brightness: Brightness.light),
+          darkTheme: buildAppTheme(brightness: Brightness.dark),
+          themeMode: ThemeController.instance.themeMode,
+          locale: LocaleController.instance.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
           routerConfig: router,
         );
       },
     );
   }
 }
-
-// import 'package:flutter/material.dart';
-
-// import 'services/auth/auth_service.dart';
-// import 'services/onboarding/welcome_choice_store.dart';
-
-// import 'services/focus/profile_bootstrap.dart';
-// import 'services/focus/timer_notification_service.dart';
-// import 'services/focus/focus_notification_navigation.dart';
-// import 'services/focus/active_focus_profile.dart';
-// import 'theme/app_theme.dart';
-
-// import 'router.dart';
-
-// Future<void> main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-
-//   if (clerkPublishableKey.isEmpty) {
-//     throw StateError(
-//       'Missing CLERK_PUBLISHABLE_KEY. Run with --dart-define-from-file=clerk.json',
-//     );
-//   }
-//   AuthService.instance.start(); // background, never awaited
-
-//   await TimerNotificationService.instance.init();
-//   await ensureCoreProfiles();
-//   await WelcomeChoiceStore.instance.load();
-
-//   runApp(const MyApp());
-// }
-
-// class MyApp extends StatefulWidget {
-//   const MyApp({super.key});
-
-//   @override
-//   State<MyApp> createState() => _MyAppState();
-// }
-
-// class _MyAppState extends State<MyApp> {
-//   @override
-//   void initState() {
-//     super.initState();
-
-//     FocusNotificationNavigation.instance.start(openTimer: _openActiveTimer);
-//   }
-
-//   Future<void> _openActiveTimer() async {
-//     try {
-//       final profile = await loadActiveFocusProfile();
-
-//       if (!mounted || profile == null) return;
-
-//       router.go('/countdown', extra: profile);
-//     } catch (error) {
-//       debugPrint('Failed to open active timer: $error');
-//     }
-//   }
-
-//   @override
-//   void dispose() {
-//     FocusNotificationNavigation.instance.stop();
-//     super.dispose();
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp.router(
-//       title: 'Rest For More',
-//       theme: buildAppTheme(),
-//       debugShowCheckedModeBanner: false,
-//       routerConfig: router,
-//     );
-//   }
-// }

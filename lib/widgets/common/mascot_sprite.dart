@@ -1,32 +1,9 @@
 import 'package:flutter/material.dart';
 
-class SheepScreen extends StatefulWidget {
-  const SheepScreen({super.key});
-
-  @override
-  State<SheepScreen> createState() => _SheepScreenState();
-}
-
-class _SheepScreenState extends State<SheepScreen> {
-  int cell = 6;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Sheep')),
-      body: Center(
-        child: GestureDetector(
-          onTap: () => setState(() => cell = (cell + 1) % 9),
-          child: MascotSprite(
-            sheet: 'assets/mascot/sheep-reactions.webp',
-            cell: cell,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+/// One sheep from a mascot sprite sheet: a 3 × 3 grid of poses in one image
+/// (e.g. assets/mascot/sheep-reactions.webp).
+///
+/// Shows only cell [cell] of the sheet, scaled to [size] × [size].
 class MascotSprite extends StatelessWidget {
   const MascotSprite({
     super.key,
@@ -34,19 +11,28 @@ class MascotSprite extends StatelessWidget {
     required this.cell,
     this.size = 140,
   });
+
+  /// Asset path of the sprite sheet.
   final String sheet;
-  final int cell; // 0–8, counted row by row
+
+  /// Which pose: 0–8, counted row by row from the top left.
+  final int cell;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    final col = cell % 3, row = cell ~/ 3;
+    final col = cell % 3;
+    final row = cell ~/ 3;
+
     return SizedBox.square(
       dimension: size,
+      // Draw the whole sheet at 3× size, shift it so the wanted cell sits
+      // in the visible square, and clip off the rest.
       child: ClipRect(
         child: OverflowBox(
           maxWidth: size * 3,
           maxHeight: size * 3,
+          // -1, 0 or 1 per axis = left/top, middle, right/bottom cell.
           alignment: Alignment(col - 1.0, row - 1.0),
           child: Image.asset(
             sheet,

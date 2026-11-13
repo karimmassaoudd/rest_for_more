@@ -10,7 +10,20 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get welcomeTitle => 'Welcome to Rest For More';
+  String get welcomeTitle => 'Welcome to\nRest For More';
+
+  @override
+  String get welcomeSubtitle =>
+      'Put your phone away, build calm routines.\nA RestNest is optional.';
+
+  @override
+  String get welcomeGetStarted => 'Get started';
+
+  @override
+  String get welcomeHaveAccount => 'Already have an account?';
+
+  @override
+  String get welcomeLogIn => 'Log in';
 
   @override
   String get languageTitle => 'Choose your language';
@@ -58,4 +71,90 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorialBack => 'Back';
+
+  @override
+  String get tutorialDone => 'Done';
+
+  @override
+  String get profileHelp => 'Help';
+
+  @override
+  String get profileManual => 'How Rest For More works';
+
+  @override
+  String get profileLanguageDone => 'Done';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get profileAppearance => 'Appearance';
+
+  @override
+  String get profileLanguage => 'Language';
+
+  @override
+  String get profileChooseLanguage => 'Choose language';
+
+  @override
+  String get profileYourData => 'Your data';
+
+  @override
+  String get profileAccount => 'Account';
+
+  @override
+  String get profileGuestTitle => 'You\'re using Rest For More as a guest';
+
+  @override
+  String get profileGuestDescription =>
+      'Your data is only saved on this phone.';
+
+  @override
+  String get profileCreateAccount => 'Create account to keep your data';
+
+  @override
+  String get profileLogin => 'Log in';
+
+  @override
+  String get profileLogout => 'Log out';
+
+  @override
+  String get profileLogoutTitle => 'Log out?';
+
+  @override
+  String get profileLogoutMessage =>
+      'Your focus profiles and routines stay on this phone.';
+
+  @override
+  String get profileDelete => 'Delete account';
+
+  @override
+  String get profileDeleteTitle => 'Delete your account?';
+
+  @override
+  String get profileDeleteMessage =>
+      'This permanently removes your account and backed-up data. This can\'t be undone.';
+
+  @override
+  String get profileBackup => 'Back up my data';
+
+  @override
+  String get profileLastBackup => 'Last backup: never';
+
+  @override
+  String get profileComingSoon => 'Coming soon';
+
+  @override
+  String get profileAppearanceLight => 'Light';
+
+  @override
+  String get profileAppearanceDark => 'Dark';
+
+  @override
+  String get profileAppearanceSystem => 'System';
+
+  @override
+  String profileAppearanceSemantics(Object selected) {
+    return 'Appearance: $selected. Coming soon';
+  }
 }

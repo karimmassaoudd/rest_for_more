@@ -1,5 +1,11 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Saves the running focus session on the phone, so it survives the app
+/// being closed: end time, profile, break and pauses.
+/// Also keeps the timer settings (last duration, custom presets).
+///
+/// All times are milliseconds since epoch. Don't rename the keys:
+/// that would lose a session that is running during an update.
 class SessionStore {
   static const _endTimeKey = 'sessionEndTimeMillis';
   static const _profileNameKey = 'sessionProfileName';
@@ -10,17 +16,21 @@ class SessionStore {
   static const _totalMillisKey = 'totalTimeInMillis';
   static const _customPresetsKey = 'customPresets';
 
-  Future<String?> profileName() async {
+  /// Prefs re-read from disk, in case another part of the app
+  /// (or a notification) changed them in the meantime.
+  Future<SharedPreferences> _fresh() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
-    return prefs.getString(_profileNameKey);
+    return prefs;
   }
 
-  Future<String?> profileId() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-    return prefs.getString(_profileIdKey);
-  }
+  // ---------- running session ----------
+
+  Future<String?> profileName() async =>
+      (await _fresh()).getString(_profileNameKey);
+
+  Future<String?> profileId() async =>
+      (await _fresh()).getString(_profileIdKey);
 
   Future<void> setProfileId(String id) async {
     final prefs = await SharedPreferences.getInstance();
@@ -32,6 +42,7 @@ class SessionStore {
     await prefs.setString(_profileNameKey, name);
   }
 
+  /// Starts the session clock: it ends [remainingMillis] from now.
   Future<void> setEndIn(int remainingMillis) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
@@ -40,6 +51,7 @@ class SessionStore {
     );
   }
 
+  /// Forgets the session (the timer settings stay).
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_endTimeKey);
@@ -50,9 +62,10 @@ class SessionStore {
     await prefs.remove(_profileIdKey);
   }
 
+  /// Focus time left, or null when no session was started.
+  /// During a break it stays frozen at the break's end.
   Future<int?> remainingMillis() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
+    final prefs = await _fresh();
     final end = prefs.getInt(_endTimeKey);
     if (end == null) return null;
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -60,6 +73,7 @@ class SessionStore {
     return end - (breakEnd > now ? breakEnd : now);
   }
 
+  /// True when a session was started and its time is up.
   Future<bool> hasExpired() async {
     final left = await remainingMillis();
     return left != null && left <= 0;
@@ -71,31 +85,18 @@ class SessionStore {
     return left != null && left > 0;
   }
 
-  Future<int?> endAt() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-    return prefs.getInt(_endTimeKey);
-  }
+  Future<int?> endAt() async => (await _fresh()).getInt(_endTimeKey);
 
-  Future<int> breakEnd() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-    return prefs.getInt(_breakEndKey) ?? 0;
-  }
+  /// 0 when there is no break.
+  Future<int> breakEnd() async => (await _fresh()).getInt(_breakEndKey) ?? 0;
 
-  Future<int> pausesUsed() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-    return prefs.getInt(_pausesUsedKey) ?? 0;
-  }
+  Future<int> pausesUsed() async =>
+      (await _fresh()).getInt(_pausesUsedKey) ?? 0;
 
-  Future<int> pausesAllowed() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
-    return prefs.getInt(_pausesAllowedKey) ?? 0;
-  }
+  Future<int> pausesAllowed() async =>
+      (await _fresh()).getInt(_pausesAllowedKey) ?? 0;
 
-  /// Called when a session starts: set the allowance, reset the rest.
+  /// Called when a session starts: sets the allowance and resets the rest.
   Future<void> setPausesAllowed(int allowed) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_pausesAllowedKey, allowed);
@@ -103,10 +104,9 @@ class SessionStore {
     await prefs.remove(_breakEndKey);
   }
 
-  /// Starts a break: the end time moves back by the break length.
+  /// Starts a break: the session end moves back by the break length.
   Future<void> startBreak(Duration length) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
+    final prefs = await _fresh();
     final end = prefs.getInt(_endTimeKey);
     if (end == null) return;
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -122,6 +122,7 @@ class SessionStore {
     return prefs.getInt(_totalMillisKey);
   }
 
+  /// Custom presets in minutes (stored as strings).
   Future<List<int>> customPresets() async {
     final prefs = await SharedPreferences.getInstance();
     return (prefs.getStringList(_customPresetsKey) ?? [])

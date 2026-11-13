@@ -1,3 +1,7 @@
+/// Android package names suggested when the user taps "Suggested Apps"
+/// on the Edit Always Available Apps screen. Only the installed ones are selected.
+///
+/// Most apps have a Google, a generic (AOSP) and a Samsung version.
 const commonlyNeededApps = [
   // Camera
   'com.google.android.GoogleCamera',
@@ -11,16 +15,14 @@ const commonlyNeededApps = [
   'com.google.android.calculator',
   'com.android.calculator2', // generic/AOSP
   'com.sec.android.app.popupcalculator', // Samsung
-  // Maps (same package across manufacturers)
+  // Maps (same package on every phone)
   'com.google.android.apps.maps',
-
   // Contacts
   'com.google.android.contacts',
   'com.android.contacts', // generic/AOSP
   'com.samsung.android.app.contacts', // Samsung
-  // Settings (same package across manufacturers)
+  // Settings (same package on every phone)
   'com.android.settings',
-
   // Email
   'com.google.android.gm', // Gmail
   'com.samsung.android.email.provider', // Samsung Email

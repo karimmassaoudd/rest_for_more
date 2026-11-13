@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../models/home/home_card.dart';
-import 'home_carousel_card.dart';
 import '../common/page_dots.dart';
+import 'home_carousel_card.dart';
 
 /// Swipeable row of [HomeCard]s with page dots inside each card.
 /// One card is shown at a time; the dots can also be tapped.

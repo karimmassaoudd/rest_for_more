@@ -2,13 +2,12 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+/// Draws the timer dial: [tickCount] short lines in a circle, like sun rays.
+///
+/// Starting at the top and going anticlockwise, the first [progress] part of
+/// the ticks is coloured (fading from [activeColorStart] to [activeColorEnd]);
+/// the rest is drawn in [inactiveColor].
 class SunburstTimerPainter extends CustomPainter {
-  final double progress;
-  final int tickCount;
-  final Color activeColorStart;
-  final Color activeColorEnd;
-  final Color inactiveColor;
-
   SunburstTimerPainter({
     required this.progress,
     required this.tickCount,
@@ -16,6 +15,13 @@ class SunburstTimerPainter extends CustomPainter {
     required this.activeColorEnd,
     required this.inactiveColor,
   });
+
+  /// 0.0 to 1.0.
+  final double progress;
+  final int tickCount;
+  final Color activeColorStart;
+  final Color activeColorEnd;
+  final Color inactiveColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -57,6 +63,7 @@ class SunburstTimerPainter extends CustomPainter {
     }
   }
 
+  // Colours and tick count never change while the timer runs.
   @override
   bool shouldRepaint(covariant SunburstTimerPainter oldDelegate) {
     return oldDelegate.progress != progress;

@@ -2,16 +2,25 @@ import 'package:app_blocker/app_blocker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../services/focus/timer_notification_service.dart';
-
+import '../../models/focus/pause_rules.dart';
 import '../../services/focus/blocking_service.dart';
 import '../../services/focus/session_controller.dart';
-import '../../theme/app_colors.dart';
+import '../../services/focus/timer_notification_service.dart';
 import '../../theme/app_fonts.dart';
-import '../../widgets/focus/sunburst_timer_painter.dart';
-import '../../models/focus/pause_rules.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/common/rfm_logo.dart';
 import '../../widgets/common/confirm_dialog.dart';
+import '../../widgets/focus/duration_presets.dart';
+import '../../widgets/focus/timer_dial.dart';
+import '../../widgets/focus/timer_primary_button.dart';
 
+/// Focus timer for one [profile].
+///
+/// Before the session: pick a duration (preset or custom) and press Start.
+/// During the session: the dial counts down, apps are blocked, and the user
+/// can take a limited number of short breaks or stop early.
+///
+/// All timer logic lives in [SessionController]; this screen only shows it.
 class CountdownTimerPage extends StatefulWidget {
   const CountdownTimerPage({super.key, required this.profile});
 
@@ -23,8 +32,15 @@ class CountdownTimerPage extends StatefulWidget {
 
 class _CountdownTimerPageState extends State<CountdownTimerPage>
     with WidgetsBindingObserver {
+  /// Presets that are always shown, before the user's own ones.
+  static const _defaultPresets = [15, 30, 45];
+
   late final SessionController _controller;
   final _blocking = BlockingService();
+
+  // ------------------------------------------------------------------
+  // Lifecycle
+  // ------------------------------------------------------------------
 
   @override
   void initState() {
@@ -42,6 +58,8 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
     super.dispose();
   }
 
+  /// Saves the timer when the app goes to the background and
+  /// catches up on the time that passed when it comes back.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused ||
@@ -51,6 +69,10 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
       _controller.onResumed();
     }
   }
+
+  // ------------------------------------------------------------------
+  // Actions
+  // ------------------------------------------------------------------
 
   Future<void> _showFinishedDialog() async {
     if (!mounted) return;
@@ -71,12 +93,15 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
     await TimerNotificationService.instance.cancelAll();
   }
 
+  /// Asks for the blocking permission if needed, then starts the session.
   Future<void> _onStartPressed() async {
     if (_controller.remainingMillis <= 0) return;
+
     final granted = await _blocking.ensurePermission(context);
     if (!granted || !mounted) return;
 
     final started = await _controller.start();
+
     if (!started && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't start the session. Try again.")),
@@ -84,6 +109,7 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
     }
   }
 
+  /// Ends the session after a confirm dialog. Not possible during a break.
   Future<void> _onStopPressed() async {
     if (_controller.isOnBreak) {
       ScaffoldMessenger.of(context)
@@ -110,7 +136,8 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
     _controller.stop();
   }
 
-  Future<void> _navigateToCustomTimePage() async {
+  /// Opens the custom time page and saves the presets it returns.
+  Future<void> _openCustomTime() async {
     final updatedPresets = await context.push<List<int>>(
       '/custom-time',
       extra: _controller.customPresets,
@@ -121,18 +148,30 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
     }
   }
 
-  String _convertToTimeFormat(int millis) {
-    final safeMillis = millis < 0 ? 0 : millis;
-    final totalSeconds = (safeMillis / 1000).ceil();
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final seconds = totalSeconds % 60;
+  // ------------------------------------------------------------------
+  // Values for the UI
+  // ------------------------------------------------------------------
 
-    if (hours > 0) {
-      return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  /// How full the dial is: break time left during a break, otherwise session time left.
+  double get _progress {
+    if (_controller.isOnBreak) {
+      return (_controller.breakLeftMillis / (kBreakMinutes * 60 * 1000)).clamp(
+        0.0,
+        1.0,
+      );
     }
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    if (_controller.totalMillis <= 0) return 0.0;
+    return (_controller.remainingMillis / _controller.totalMillis).clamp(
+      0.0,
+      1.0,
+    );
   }
+
+  /// Default presets first, then the user's own (without duplicates).
+  List<int> get _allPresets => [
+    ..._defaultPresets,
+    ..._controller.customPresets.where((p) => !_defaultPresets.contains(p)),
+  ];
 
   String get _pauseLabel {
     if (_controller.isOnBreak) return 'Break in progress';
@@ -141,7 +180,71 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
     return 'Pause (${_controller.pausesLeft} left)';
   }
 
+  // ------------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final onBreak = _controller.isOnBreak;
+
+        return Scaffold(
+          backgroundColor: context.palette.background,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 28),
+                _buildIntro(),
+                Expanded(
+                  child: Center(
+                    child: TimerDial(
+                      progress: _progress,
+                      millisLeft: onBreak
+                          ? _controller.breakLeftMillis
+                          : _controller.remainingMillis,
+                      onBreak: onBreak,
+                    ),
+                  ),
+                ),
+                // Durations can only be picked before the session starts.
+                if (!_controller.hasStarted) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 28),
+                    child: DurationPresetGrid(
+                      presets: _allPresets,
+                      selectedMillis: _controller.totalMillis,
+                      onSelected: _controller.selectPreset,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 28),
+                      child: AddPresetButton(onTap: _openCustomTime),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                _buildButtons(onBreak),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Back arrow, profile name and logo.
+
+  /// Back arrow, profile name and logo.
   Widget _buildHeader() {
+    final palette = context.palette;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Row(
@@ -151,302 +254,84 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
             // so go Home instead of popping (pop would do nothing).
             onTap: () => context.canPop() ? context.pop() : context.go('/'),
             customBorder: const CircleBorder(),
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(
-                Icons.arrow_back,
-                size: 25,
-                color: AppColors.mediumbrown,
-              ),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.arrow_back, size: 25, color: palette.accent),
             ),
           ),
           const SizedBox(width: 14),
           Text(
             widget.profile.name,
-            style: AppFonts.montserrat(size: 15, color: AppColors.mediumbrown),
+            style: AppFonts.montserrat(size: 15, color: palette.accent),
           ),
           const Spacer(),
-          Image.asset(
-            'assets/images/rfm_logo.png',
-            height: 40,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) =>
-                const SizedBox.shrink(),
+          RfmLogo(textColor: context.palette.muted),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIntro() {
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'How long do you want to focus?',
+            style: AppFonts.cormorant(
+              size: 26,
+              weight: FontWeight.w600,
+              color: palette.text,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'You can always pause or stop the timer along the way',
+            style: AppFonts.cormorant(size: 15, color: palette.muted),
           ),
         ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) {
-        final onBreak = _controller.isOnBreak;
-        final progress = onBreak
-            ? (_controller.breakLeftMillis / (kBreakMinutes * 60 * 1000)).clamp(
-                0.0,
-                1.0,
-              )
-            : (_controller.totalMillis > 0
-                  ? (_controller.remainingMillis / _controller.totalMillis)
-                        .clamp(0.0, 1.0)
-                  : 0.0);
-        final allPresets = <int>[
-          15,
-          30,
-          45,
-          ..._controller.customPresets.where((p) => ![15, 30, 45].contains(p)),
-        ];
-
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 28),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'How long do you want to focus?',
-                        style: AppFonts.cormorant(
-                          size: 26,
-                          weight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'You can always pause or stop the timer along the way',
-                        style: AppFonts.cormorant(
-                          size: 15,
-                          color: AppColors.lightbrown,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: SizedBox(
-                        width: 310,
-                        height: 310,
-                        child: CustomPaint(
-                          painter: SunburstTimerPainter(
-                            progress: progress,
-                            tickCount: 72,
-                            activeColorStart: AppColors.yellowhighlight,
-                            activeColorEnd: AppColors.darkbrown,
-                            inactiveColor: AppColors.surface,
-                          ),
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (onBreak)
-                                  Text(
-                                    'Break',
-                                    style: AppFonts.montserrat(
-                                      size: 14,
-                                      color: AppColors.lightbrown,
-                                    ),
-                                  ),
-                                Text(
-                                  _convertToTimeFormat(
-                                    onBreak
-                                        ? _controller.breakLeftMillis
-                                        : _controller.remainingMillis,
-                                  ),
-                                  style: AppFonts.cormorant(
-                                    size: 64,
-                                    weight: FontWeight.w300,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
+  /// "Start" before the session; "Pause" + "Stop" while it runs.
+  Widget _buildButtons(bool onBreak) {
+    final palette = context.palette;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!_controller.hasStarted)
+              TimerPrimaryButton(label: 'Start', onPressed: _onStartPressed)
+            else ...[
+              TimerPrimaryButton(
+                label: _pauseLabel,
+                onPressed: _controller.canPause ? _controller.startBreak : null,
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: TextButton(
+                  onPressed: _onStopPressed,
+                  child: Text(
+                    'Stop',
+                    style: AppFonts.manrope(
+                      size: 16,
+                      weight: FontWeight.w600,
+                      // Greyed out during a break (stopping isn't allowed then).
+                      color: onBreak ? palette.muted : palette.accent,
                     ),
                   ),
                 ),
-                if (!_controller.hasStarted) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 28),
-                    child: _buildPresetGrid(allPresets),
-                  ),
-                  const SizedBox(height: 14),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 28),
-                      child: _buildPlusButton(),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (!_controller.hasStarted)
-                          _buildPrimaryButton('Start', _onStartPressed)
-                        else ...[
-                          _buildPrimaryButton(
-                            _pauseLabel,
-                            _controller.canPause
-                                ? _controller.startBreak
-                                : null,
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: TextButton(
-                              onPressed: _onStopPressed,
-                              child: Text(
-                                'Stop',
-                                style: AppFonts.manrope(
-                                  size: 16,
-                                  weight: FontWeight.w600,
-                                  color: onBreak
-                                      ? AppColors.lightbrown
-                                      : AppColors.mediumbrown,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildPrimaryButton(String label, VoidCallback? onPressed) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.mediumbrown,
-          disabledBackgroundColor: AppColors.surface,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        onPressed: onPressed,
-        child: Text(
-          label,
-          style: AppFonts.manrope(
-            size: 15,
-            color: onPressed == null
-                ? AppColors.lightbrown
-                : AppColors.background,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlusButton() {
-    return Material(
-      color: AppColors.surface,
-      elevation: 3,
-      shadowColor: AppColors.darkbrown.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: _navigateToCustomTimePage,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.lightbrown, width: 1),
-          ),
-          child: const Icon(Icons.add, size: 28, color: AppColors.mediumbrown),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPresetGrid(List<int> presets) {
-    const perRow = 3;
-    const gap = 12.0;
-    final rows = <Widget>[];
-
-    for (var start = 0; start < presets.length; start += perRow) {
-      final cells = <Widget>[];
-      for (var c = 0; c < perRow; c++) {
-        final index = start + c;
-        if (c > 0) cells.add(const SizedBox(width: gap));
-        cells.add(
-          Expanded(
-            child: index < presets.length
-                ? _buildPresetButton(presets[index])
-                : const SizedBox.shrink(),
-          ),
-        );
-      }
-      if (rows.isNotEmpty) rows.add(const SizedBox(height: gap));
-      rows.add(Row(children: cells));
-    }
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 152),
-      child: SingleChildScrollView(child: Column(children: rows)),
-    );
-  }
-
-  Widget _buildPresetButton(int minutes) {
-    final isSelected = _controller.totalMillis == minutes * 60 * 1000;
-    final label = minutes >= 60
-        ? '${minutes ~/ 60}h${minutes % 60 > 0 ? " ${minutes % 60}m" : ""}'
-        : '$minutes min';
-
-    return Material(
-      color: isSelected ? AppColors.mediumbrown : AppColors.surface,
-      elevation: isSelected ? 0 : 3,
-      shadowColor: AppColors.darkbrown.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: () => _controller.selectPreset(minutes),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: isSelected
-                ? null
-                : Border.all(color: AppColors.lightbrown, width: 1),
-          ),
-          child: Text(
-            label,
-            style: AppFonts.manrope(
-              size: 13,
-              color: isSelected ? AppColors.background : AppColors.mediumbrown,
-            ),
-          ),
+              ),
+            ],
+          ],
         ),
       ),
     );

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/auth/verify_args.dart';
 import '../../services/auth/auth_errors.dart';
 import '../../services/auth/auth_flow.dart';
 import '../../services/onboarding/welcome_choice_store.dart';
-import '../../../../theme/app_colors.dart';
-import '../../../../theme/app_fonts.dart';
-import '../../../../widgets/auth/auth_widgets.dart';
-import 'verify_email_screen.dart';
+import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/auth/auth_widgets.dart';
 
-/// REST-100 Log in (Figma screen 4).
+/// Log-in screen.
+///
+/// On success the user goes to Home. If Clerk wants extra proof
+/// (new device), it sends an email code and we go to the verify screen.
 class LogInScreen extends StatefulWidget {
   const LogInScreen({super.key});
 
@@ -33,6 +36,8 @@ class _LogInScreenState extends State<LogInScreen> {
     super.dispose();
   }
 
+  /// Light local checks; Clerk does the real check.
+  /// Shows the errors under the fields and returns true when both are filled in.
   bool _validate() {
     setState(() {
       _emailError = _email.text.trim().contains('@')
@@ -76,6 +81,7 @@ class _LogInScreenState extends State<LogInScreen> {
             _emailError = failure.message;
           case AuthField.password:
             _passwordError = failure.message;
+          // No code field on this screen, so code errors show as general.
           case AuthField.code:
           case AuthField.general:
             _generalError = failure.message;
@@ -86,8 +92,8 @@ class _LogInScreenState extends State<LogInScreen> {
     }
   }
 
+  /// Placeholder until password reset is built.
   void _forgotPassword() {
-    // Story 7 (Forgot password) is a "Should" for later this sprint.
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -136,7 +142,7 @@ class _LogInScreenState extends State<LogInScreen> {
             child: TextButton(
               onPressed: _loading ? null : _forgotPassword,
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.darkbrown,
+                foregroundColor: context.palette.text,
                 textStyle: AppFonts.manrope(size: 12, weight: FontWeight.w600),
               ),
               child: const Text('Forgot password?'),

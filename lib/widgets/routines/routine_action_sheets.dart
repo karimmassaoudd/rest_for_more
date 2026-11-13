@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_fonts.dart';
 
+/// Bottom sheet to add a step to the morning or evening routine.
+/// Closes with the new [RoutineStep], or nothing when dismissed.
 class AddRoutineSheet extends StatefulWidget {
   const AddRoutineSheet({
     super.key,
@@ -37,6 +40,7 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
     super.dispose();
   }
 
+  /// 12-hour, like the default steps: "8:00 AM".
   String _formatTime(TimeOfDay time) {
     final hour = time.hourOfPeriod == 0 ? 12 : time.hourOfPeriod;
     final minute = time.minute.toString().padLeft(2, '0');
@@ -89,10 +93,10 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
             const SizedBox(height: 22),
             Text(
               'Add ${widget.period.name} step',
-              style: TextStyle(
+              style: AppFonts.cormorant(
+                size: 25,
+                weight: FontWeight.w600,
                 color: palette.text,
-                fontFamily: 'serif',
-                fontSize: 25,
               ),
             ),
             const SizedBox(height: 18),
@@ -102,7 +106,7 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
               autofocus: true,
               textCapitalization: TextCapitalization.sentences,
               style: TextStyle(color: palette.text),
-              decoration: _inputDecoration('Step name', palette),
+              decoration: const InputDecoration(labelText: 'Step name'),
               validator: (value) => value == null || value.trim().isEmpty
                   ? 'Enter a routine name'
                   : null,
@@ -131,7 +135,7 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
                     initialValue: _duration,
                     dropdownColor: palette.card,
                     style: TextStyle(color: palette.text),
-                    decoration: _inputDecoration('Duration', palette),
+                    decoration: const InputDecoration(labelText: 'Duration'),
                     items: const [5, 10, 15, 20, 30]
                         .map(
                           (minutes) => DropdownMenuItem(
@@ -154,10 +158,6 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
               child: FilledButton(
                 key: const Key('save-routine-button'),
                 onPressed: _save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: palette.button,
-                  foregroundColor: palette.buttonText,
-                ),
                 child: const Text('Add step'),
               ),
             ),
@@ -166,29 +166,9 @@ class _AddRoutineSheetState extends State<AddRoutineSheet> {
       ),
     );
   }
-
-  InputDecoration _inputDecoration(String label, RoutinePalette palette) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: palette.muted),
-      filled: true,
-      fillColor: palette.surface,
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: palette.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: palette.accent, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.redAccent),
-      ),
-    );
-  }
 }
 
+/// What the user chose in [RoutineSettingsSheet].
 class RoutineSettingsResult {
   const RoutineSettingsResult({
     required this.autoAdvanceToEvening,
@@ -201,6 +181,8 @@ class RoutineSettingsResult {
   final bool switchToEvening;
 }
 
+/// Bottom sheet with routine settings (opened from the evening header):
+/// auto-switch to evening, reset progress, go to evening now.
 class RoutineSettingsSheet extends StatefulWidget {
   const RoutineSettingsSheet({
     super.key,
@@ -261,12 +243,13 @@ class _RoutineSettingsSheetState extends State<RoutineSettingsSheet> {
             const SizedBox(height: 22),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
+
               child: Text(
                 'Routine settings',
-                style: TextStyle(
+                style: AppFonts.cormorant(
+                  size: 25,
+                  weight: FontWeight.w600,
                   color: palette.text,
-                  fontFamily: 'serif',
-                  fontSize: 25,
                 ),
               ),
             ),
@@ -319,10 +302,6 @@ class _RoutineSettingsSheetState extends State<RoutineSettingsSheet> {
               child: FilledButton(
                 key: const Key('save-settings-button'),
                 onPressed: _close,
-                style: FilledButton.styleFrom(
-                  backgroundColor: palette.button,
-                  foregroundColor: palette.buttonText,
-                ),
                 child: const Text('Save settings'),
               ),
             ),

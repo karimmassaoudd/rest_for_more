@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_fonts.dart';
 import '../common/rfm_logo.dart';
 
+/// Top of the routine screen: back button, logo, "Morning"/"Evening",
+/// and an action on the right (morning: refresh, evening: settings).
+/// In the morning it also shows a short intro text.
 class GreetingHeader extends StatelessWidget {
   const GreetingHeader({
     super.key,
@@ -66,12 +70,11 @@ class GreetingHeader extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             'Your morning',
-            style: TextStyle(
+            style: AppFonts.cormorant(
+              size: 30,
+              weight: FontWeight.w600,
               color: palette.text,
-              fontFamily: 'serif',
-              fontSize: 27,
-              height: 1,
-            ),
+            ).copyWith(height: 1),
           ),
           const SizedBox(height: 9),
           Text(

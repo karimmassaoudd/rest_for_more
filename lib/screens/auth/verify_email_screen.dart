@@ -3,24 +3,26 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/auth/verify_args.dart';
 import '../../services/auth/auth_errors.dart';
 import '../../services/auth/auth_flow.dart';
 import '../../services/onboarding/welcome_choice_store.dart';
-import '../../../../theme/app_colors.dart';
-import '../../../../theme/app_fonts.dart';
-import '../../../../widgets/auth/auth_widgets.dart';
+import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/auth/auth_widgets.dart';
 
-/// What the Check your email screen needs (passed as go_router `extra`).
-class VerifyArgs {
-  const VerifyArgs({required this.email, required this.mode});
-  final String email;
-  final VerifyMode mode;
-}
+// Re-exported so files that import this screen (e.g. router.dart)
+// still get VerifyArgs without an extra import.
+export '../../models/auth/verify_args.dart';
 
-/// REST-99 Verify email (Figma screen 3 + error variant).
-/// Also used when Clerk asks for a code on log-in (Device Trust).
+/// "Check your email" screen.
+///
+/// The user types the 6-digit code from their email. Used after sign-up,
+/// and when Clerk asks for a code on log-in from a new device.
+/// "Resend code" has a 30-second cooldown.
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key, required this.args});
+
   final VerifyArgs args;
 
   @override
@@ -36,12 +38,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   String? _generalError;
 
   Timer? _cooldownTimer;
-  int _cooldown = _cooldownSeconds; // a code was just sent
+
+  /// Seconds left before "Resend code" can be tapped again.
+  int _cooldown = _cooldownSeconds;
 
   @override
   void initState() {
     super.initState();
-    _runCooldownTimer(); // a code was just sent: wait before "Resend"
+    // A code was just sent before this screen opened: wait before resending.
+    _runCooldownTimer();
   }
 
   @override
@@ -51,11 +56,16 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     super.dispose();
   }
 
+  // ------------------------------------------------------------------
+  // Resend cooldown
+  // ------------------------------------------------------------------
+
   void _startCooldown() {
     setState(() => _cooldown = _cooldownSeconds);
     _runCooldownTimer();
   }
 
+  /// Counts [_cooldown] down to 0, once per second.
   void _runCooldownTimer() {
     _cooldownTimer?.cancel();
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -67,6 +77,10 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (_cooldown <= 0) t.cancel();
     });
   }
+
+  // ------------------------------------------------------------------
+  // Actions
+  // ------------------------------------------------------------------
 
   Future<void> _verify() async {
     final code = _code.text;
@@ -89,6 +103,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       if (!mounted) return;
       final failure = describeAuthError(error);
       setState(() {
+        // Everything that isn't a general error (e.g. offline) is about the code.
         if (failure.field == AuthField.general) {
           _generalError = failure.message;
         } else {
@@ -122,9 +137,14 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     }
   }
 
+  // ------------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final canResend = _cooldown <= 0 && !_loading;
+
     return AuthScaffold(
       title: 'Check your email',
       subtitle: Text.rich(
@@ -136,7 +156,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               style: AppFonts.manrope(
                 size: 13,
                 weight: FontWeight.w700,
-                color: AppColors.darkbrown,
+                color: context.palette.text,
               ),
             ),
           ],
@@ -148,7 +168,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       footer: TextButton(
         onPressed: canResend ? _resend : null,
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.darkbrown,
+          foregroundColor: context.palette.text,
           textStyle: AppFonts.manrope(size: 13, weight: FontWeight.w700),
         ),
         child: Text(

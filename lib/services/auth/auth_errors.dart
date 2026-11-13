@@ -16,22 +16,21 @@ class AuthFailure {
 
 const _offline =
     "Can't reach Rest For More right now. Check your internet and try again.";
+const _somethingWrong = 'Something went wrong. Please try again.';
 
-/// Turns a Clerk / network error into our own message (brand tone:
-/// supportive, never "You failed"). Clerk error codes:
-/// https://clerk.com/docs/errors/overview
+/// Turns a Clerk or network error into our own message, in the brand tone:
+/// supportive, never "You failed".
+///
+/// Clerk error codes: https://clerk.com/docs/errors/overview
 AuthFailure describeAuthError(Object error) {
   if (_looksOffline(error)) {
     return const AuthFailure(AuthField.general, _offline);
   }
 
   if (error is AuthIncomplete) {
-    return error.detail == 'code not accepted'
+    return error.detail == AuthIncomplete.codeNotAccepted
         ? const AuthFailure(AuthField.code, 'Wrong code, try again')
-        : const AuthFailure(
-            AuthField.general,
-            'Something went wrong. Please try again.',
-          );
+        : const AuthFailure(AuthField.general, _somethingWrong);
   }
 
   if (error is clerk.ClerkError) {
@@ -44,7 +43,7 @@ AuthFailure describeAuthError(Object error) {
         codes.contains('form_email_address_invalid')) {
       return const AuthFailure(AuthField.email, 'Enter a valid email address');
     }
-    // Don't reveal whether the email or the password was wrong (REST-100).
+    // Don't reveal whether the email or the password was wrong.
     if (codes.contains('form_password_incorrect') ||
         codes.contains('form_identifier_not_found')) {
       return const AuthFailure(
@@ -84,12 +83,10 @@ AuthFailure describeAuthError(Object error) {
     }
   }
 
-  return const AuthFailure(
-    AuthField.general,
-    'Something went wrong. Please try again.',
-  );
+  return const AuthFailure(AuthField.general, _somethingWrong);
 }
 
+/// True for timeouts and the usual "no internet" errors from the HTTP layer.
 bool _looksOffline(Object error) {
   if (error is TimeoutException) return true;
   final text = error.toString();

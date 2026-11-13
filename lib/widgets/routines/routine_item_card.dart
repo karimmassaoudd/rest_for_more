@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
+/// One step in the routine list: time, a round check button with an icon
+/// picked from the title, name, duration, and "Done" or a ⋮ menu.
+/// Tapping anywhere on the card ticks or unticks the step.
 class RoutineItemCard extends StatelessWidget {
   const RoutineItemCard({
     super.key,
@@ -21,6 +24,7 @@ class RoutineItemCard extends StatelessWidget {
   final RoutinePalette palette;
   final VoidCallback onToggle;
 
+  /// Picks an icon from words in the title ("shower", "journal", …).
   IconData _iconForStep() {
     final title = step.title.toLowerCase();
     if (title.contains('water') ||
@@ -186,6 +190,7 @@ class RoutineItemCard extends StatelessWidget {
   }
 }
 
+/// The round button on the left of a step: its icon, or a check when done.
 class _CompletionControl extends StatelessWidget {
   const _CompletionControl({
     super.key,

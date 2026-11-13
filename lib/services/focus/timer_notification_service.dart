@@ -7,10 +7,14 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:live_activity_kit/live_activity_kit.dart';
 
 import '../../theme/app_colors.dart';
+import '../../theme/app_palette.dart';
+import 'focus_notification_navigation.dart';
 
 /// Alarm at the end of a session and the ongoing countdown in the
-/// notification shade. Every method catches its own errors, so a failing
-/// notification can never break a session.
+/// notification shade (Android) or Live Activity (iOS).
+///
+/// Every method catches its own errors, so a failing notification
+/// can never break a session.
 class TimerNotificationService {
   TimerNotificationService._();
   static final TimerNotificationService instance = TimerNotificationService._();
@@ -18,10 +22,11 @@ class TimerNotificationService {
   static const _activityId = 'focus-timer';
   static const _alarmId = 1;
   static const _breakAlarmId = 2;
-  static const _alarmAsset = 'assets/sounds/alarm.mp3';
+  static const _countdownNotificationId = 100;
 
   final _notifications = FlutterLocalNotificationsPlugin();
 
+  /// Call once in main().
   Future<void> init() async {
     try {
       await Alarm.init();
@@ -30,6 +35,10 @@ class TimerNotificationService {
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
           iOS: DarwinInitializationSettings(),
         ),
+        onDidReceiveNotificationResponse: (response) {
+          final link = response.payload;
+          if (link != null) FocusNotificationNavigation.reportTap(link);
+        },
       );
     } catch (error) {
       debugPrint('Notification setup failed: $error');
@@ -62,6 +71,8 @@ class TimerNotificationService {
     }
   }
 
+  /// Whether notifications are allowed. Android only; elsewhere (or on
+  /// error) assumes yes.
   Future<bool> hasPermission() async {
     try {
       final android = _notifications
@@ -113,9 +124,10 @@ class TimerNotificationService {
   Future<void> cancelAll() async {
     await _stopAlarm();
     await _stopBreakAlarm();
-    await _endLiveActivity();
+    await _removeCountdown();
   }
 
+  /// True while the end-of-session alarm is ringing.
   Future<bool> isRinging() async {
     try {
       return await Alarm.isRinging(_alarmId);
@@ -124,8 +136,7 @@ class TimerNotificationService {
     }
   }
 
-  // ---------- alarm ----------
-
+  /// Loud, looping alarm with a full-screen notification when the session ends.
   Future<void> _scheduleAlarm(DateTime endAt, String profileName) async {
     if (!endAt.isAfter(DateTime.now())) return;
     try {
@@ -134,7 +145,6 @@ class TimerNotificationService {
         alarmSettings: AlarmSettings(
           id: _alarmId,
           dateTime: endAt,
-          assetAudioPath: _alarmAsset,
           loopAudio: true,
           vibrate: true,
           androidAlarmClock: true,
@@ -168,6 +178,7 @@ class TimerNotificationService {
     }
   }
 
+  /// Quieter, single "Break over" sound.
   Future<void> _scheduleBreakAlarm(
     DateTime breakEnd,
     String profileName,
@@ -179,7 +190,6 @@ class TimerNotificationService {
         alarmSettings: AlarmSettings(
           id: _breakAlarmId,
           dateTime: breakEnd,
-          assetAudioPath: _alarmAsset,
           loopAudio: false,
           vibrate: true,
           androidAlarmClock: true,
@@ -212,61 +222,60 @@ class TimerNotificationService {
     }
   }
 
-  // ---------- live countdown ----------
-
+  /// Replaces the countdown with a new one running until [until].
+  ///
+  /// Android: a normal ongoing notification (see [_showAndroidCountdown]).
+  /// iOS: a Live Activity. The Dynamic Island is always black and the lock
+  /// screen gets our own tint, so both use the dark app palette.
   Future<void> _showCountdown({
     required DateTime until,
     required String title,
     required String subtitle,
   }) async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      await _showAndroidCountdown(
+        until: until,
+        title: title,
+        subtitle: subtitle,
+      );
+      return;
+    }
+
     final remaining = until.difference(DateTime.now()).inMilliseconds;
+    const dark = AppPalette.dark;
     try {
-      await _endLiveActivity(); // makes sure the old text is replaced
+      await _removeCountdown(); // replaces the old text
       await LiveActivity.show(
         id: _activityId,
-        deepLink: 'restformore://open-active-timer',
-        compact: LA.row([
-          LA.symbol('timer', size: 18, color: AppColors.mediumbrown),
-          LA.countdown(
-            until,
-            size: 18,
-            weight: FontWeight.w600,
-            color: AppColors.mediumbrown,
-            monospacedDigit: true,
-          ),
-        ], spacing: 8),
-        compactLeading: LA.symbol(
-          'timer',
-          size: 17,
-          color: AppColors.mediumbrown,
+        deepLink: FocusNotificationNavigation.timerLink,
+        theme: LATheme(
+          background: dark.background,
+          foreground: dark.text,
+          tint: dark.highlight,
         ),
+        compactLeading: LA.symbol('timer', size: 17, color: dark.highlight),
         compactTrailing: LA.countdown(
           until,
           size: 15,
           weight: FontWeight.w600,
-          color: AppColors.mediumbrown,
+          color: dark.highlight,
           monospacedDigit: true,
         ),
-        minimal: LA.symbol('timer', size: 17, color: AppColors.mediumbrown),
+        minimal: LA.symbol('timer', size: 17, color: dark.highlight),
         expanded: LA.column([
           LA.row([
-            LA.symbol('timer', size: 20, color: AppColors.yellowhighlight),
-            LA.text(
-              title,
-              size: 16,
-              weight: FontWeight.bold,
-              color: AppColors.mediumbrown,
-            ),
+            LA.symbol('timer', size: 20, color: dark.highlight),
+            LA.text(title, size: 16, weight: FontWeight.bold, color: dark.text),
             LA.spacer(),
             LA.countdown(
               until,
               size: 22,
               weight: FontWeight.w600,
-              color: AppColors.mediumbrown,
+              color: dark.highlight,
               monospacedDigit: true,
             ),
           ], spacing: 8),
-          LA.text(subtitle, size: 13, color: AppColors.lightbrown),
+          LA.text(subtitle, size: 13, color: dark.muted, maxLines: 1),
         ], spacing: 5),
         lockScreen: LA.column([
           LA.row([
@@ -274,19 +283,21 @@ class TimerNotificationService {
               title,
               size: 17,
               weight: FontWeight.bold,
-              color: AppColors.mediumbrown,
+              color: dark.text,
+              maxLines: 1,
             ),
             LA.spacer(),
             LA.countdown(
               until,
               size: 22,
               weight: FontWeight.w600,
-              color: AppColors.mediumbrown,
+              color: dark.highlight,
               monospacedDigit: true,
             ),
           ], spacing: 8),
-          LA.text(subtitle, size: 13, color: AppColors.lightbrown),
+          LA.text(subtitle, size: 13, color: dark.muted, maxLines: 1),
         ], spacing: 5),
+        // Marks the countdown as outdated 1 s after it reaches zero.
         staleAfter: Duration(milliseconds: max(1000, remaining + 1000)),
       );
     } catch (error) {
@@ -294,7 +305,59 @@ class TimerNotificationService {
     }
   }
 
-  Future<void> _endLiveActivity() async {
+  /// Android: a standard ongoing notification with the system countdown
+  /// (chronometer) in its top line. The system draws it, so it follows the
+  /// phone's light/dark mode and fits both the collapsed and the expanded
+  /// notification. It removes itself 1 s after the end; the alarm takes over.
+  Future<void> _showAndroidCountdown({
+    required DateTime until,
+    required String title,
+    required String subtitle,
+  }) async {
+    final remaining = until.difference(DateTime.now()).inMilliseconds;
+    try {
+      await _notifications.show(
+        _countdownNotificationId,
+        title,
+        subtitle,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'focus_countdown',
+            'Focus countdown',
+            channelDescription:
+                'Shows the time left in a focus session or break.',
+            importance: Importance.low,
+            priority: Priority.low,
+            ongoing: true,
+            autoCancel: false,
+            onlyAlertOnce: true,
+            silent: true,
+            showWhen: true,
+            when: until.millisecondsSinceEpoch,
+            usesChronometer: true,
+            chronometerCountDown: true,
+            timeoutAfter: max(1000, remaining + 1000),
+            color: AppColors.lightBrown,
+            visibility: NotificationVisibility.public,
+          ),
+        ),
+        payload: FocusNotificationNavigation.timerLink,
+      );
+    } catch (error) {
+      debugPrint('Unable to show focus notification: $error');
+    }
+  }
+
+  /// Removes the countdown (Android notification or iOS Live Activity).
+  Future<void> _removeCountdown() async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await _notifications.cancel(_countdownNotificationId);
+      } catch (error) {
+        debugPrint('Unable to remove focus notification: $error');
+      }
+      return;
+    }
     try {
       if (!await LiveActivity.isRunning(_activityId)) return;
       await LiveActivity.end(

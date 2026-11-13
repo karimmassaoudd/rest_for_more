@@ -2,6 +2,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/routines/routine_step.dart';
 
+/// Remembers which routine steps the user ticked off, separately for the
+/// morning and the evening routine.
+///
+/// Steps are saved by their title, so renaming a step "unticks" it.
 class RoutineProgressStorage {
   const RoutineProgressStorage();
 
@@ -13,12 +17,13 @@ class RoutineProgressStorage {
     RoutinePeriod.evening => _eveningKey,
   };
 
+  /// Titles of the completed steps, or null if nothing was saved yet.
   Future<Set<String>?> loadCompletedTasks(RoutinePeriod period) async {
     final preferences = await SharedPreferences.getInstance();
-    final savedTitles = preferences.getStringList(_keyFor(period));
-    return savedTitles?.toSet();
+    return preferences.getStringList(_keyFor(period))?.toSet();
   }
 
+  /// Saves the titles of the completed [steps] (replaces what was saved).
   Future<void> saveCompletedTasks(
     RoutinePeriod period,
     Iterable<RoutineStep> steps,

@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../services/onboarding/welcome_choice_store.dart';
-import '../../../../theme/app_colors.dart';
-import '../../../../theme/app_fonts.dart';
-import '../../../../widgets/auth/auth_widgets.dart';
-import '../../widgets/common/mascot_sprite.dart' show MascotSprite;
 
-/// Onboarding part 3: optional account (Flow A step 7, client doc 03:
-/// "Then offer optional saving or synchronisation").
-/// Create account (REST-98) or Not now = continue as guest (REST-97).
-/// Wording says "can be backed up": the backup itself is story 14.
+import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/auth/auth_widgets.dart';
+import '../../widgets/common/mascot_sprite.dart';
+
+/// Onboarding step 4 (last): offer an optional account.
+///
+/// "Create account" goes to sign-up; "Not now" continues as a guest and
+/// goes Home. Either way, Welcome isn't shown again.
+/// The text says profiles and routines "can be backed up": the backup
+/// itself isn't built yet.
 class CloudSaveScreen extends StatelessWidget {
   const CloudSaveScreen({super.key});
 
+  /// Continue as a guest.
   Future<void> _notNow(BuildContext context) async {
     await WelcomeChoiceStore.instance.markChosen();
     if (context.mounted) context.go('/');
@@ -21,6 +25,7 @@ class CloudSaveScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -33,9 +38,9 @@ class CloudSaveScreen extends StatelessWidget {
               Container(
                 width: 132,
                 height: 132,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.surface,
+                  color: palette.surface,
                 ),
                 alignment: Alignment.center,
                 child: const ExcludeSemantics(
@@ -53,6 +58,7 @@ class CloudSaveScreen extends StatelessWidget {
                 style: AppFonts.cormorant(
                   size: 32,
                   weight: FontWeight.w600,
+                  color: palette.text,
                 ).copyWith(height: 1.15),
               ),
               const SizedBox(height: 12),
@@ -61,7 +67,7 @@ class CloudSaveScreen extends StatelessWidget {
                 'can be backed up when you change phones. '
                 'An account is optional.',
                 textAlign: TextAlign.center,
-                style: AppFonts.manrope(size: 14, color: AppColors.lightbrown),
+                style: AppFonts.manrope(size: 14, color: palette.muted),
               ),
               const Spacer(flex: 3),
               SizedBox(
@@ -76,10 +82,11 @@ class CloudSaveScreen extends StatelessWidget {
               TextButton(
                 onPressed: () => _notNow(context),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.darkbrown,
+                  foregroundColor: palette.text,
                   textStyle: AppFonts.manrope(
                     size: 14,
                     weight: FontWeight.w600,
+                    color: palette.text,
                   ).copyWith(decoration: TextDecoration.underline),
                 ),
                 child: const Text('Not now, continue as guest'),

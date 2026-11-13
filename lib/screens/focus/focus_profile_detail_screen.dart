@@ -1,23 +1,29 @@
-import 'package:flutter/material.dart';
 import 'package:app_blocker/app_blocker.dart';
-
-import '../../services/focus/installed_apps_service.dart';
-
-import '../../models/focus/focus_profile_meta.dart';
-import '../../services/focus/always_available_apps_store.dart';
-import '../../models/focus/hard_always_available_apps.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_fonts.dart';
-import '../../widgets/common/confirm_dialog.dart';
-import '../../services/focus/profile_events.dart';
-import '../../services/focus/session_store.dart';
-
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class FocusProfileDetailScreen extends StatefulWidget {
-  final BlockProfile profile;
+import '../../models/focus/focus_profile_meta.dart';
+import '../../models/focus/hard_always_available_apps.dart';
 
+import '../../services/focus/always_available_apps_store.dart';
+import '../../services/focus/installed_apps_service.dart';
+import '../../services/focus/profile_edit_guard.dart';
+import '../../services/focus/profile_events.dart';
+import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
+import '../../widgets/common/confirm_dialog.dart';
+import '../../widgets/common/text_input_dialog.dart';
+import '../../widgets/focus/app_info_list.dart';
+
+/// Detail page for one focus profile: rename or delete it, and see and
+/// edit its blocked apps and always-available apps.
+///
+/// Nothing can be changed while a focus session is running.
+/// Core profiles (focus, read, morning, evening) can't be renamed or deleted.
+class FocusProfileDetailScreen extends StatefulWidget {
   const FocusProfileDetailScreen({super.key, required this.profile});
+
+  final BlockProfile profile;
 
   @override
   State<FocusProfileDetailScreen> createState() =>
@@ -25,139 +31,106 @@ class FocusProfileDetailScreen extends StatefulWidget {
 }
 
 class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
-  final blocker = AppBlocker.instance;
-  final store = AlwaysAvailableAppsStore();
-  List<AppInfo> allApps = [];
-  Set<String> alwaysAvailableApps = {};
-  late BlockProfile currentProfile;
+  final _blocker = AppBlocker.instance;
+  final _store = AlwaysAvailableAppsStore();
+
+  /// All installed apps, used to turn package names into names + icons.
+  List<AppInfo> _allApps = [];
+  Set<String> _alwaysAvailableApps = {};
+
+  /// Updated after a rename or a change in blocked apps.
+  late BlockProfile _profile;
 
   @override
   void initState() {
     super.initState();
-    currentProfile = widget.profile;
+    _profile = widget.profile;
     _loadData();
   }
 
+  // ------------------------------------------------------------------
+  // Loading
+  // ------------------------------------------------------------------
+
   Future<void> _loadData() async {
     final apps = await InstalledAppsService.getApps();
-    final alwaysAvailable = await store.getAlwaysAvailableApps(
-      currentProfile.id,
-    );
-
     if (!mounted) return;
+    setState(() => _allApps = apps);
+    await _loadAlwaysAvailableApps();
+  }
 
+  Future<void> _loadAlwaysAvailableApps() async {
+    final alwaysAvailable = await _store.getAlwaysAvailableApps(_profile.id);
+    if (!mounted) return;
     setState(() {
-      allApps = apps;
-      alwaysAvailableApps = getHardAlwaysAvailableApps(alwaysAvailable.toSet());
+      _alwaysAvailableApps = getHardAlwaysAvailableApps(
+        alwaysAvailable.toSet(),
+      );
     });
   }
 
-  List<AppInfo> _resolveApps(List<String> packageNames) {
-    return allApps
+  /// Reloads this profile from the blocker (after a rename or app change).
+  Future<void> _refreshProfile() async {
+    final all = await _blocker.getProfiles();
+    final updated = all.firstWhere(
+      (p) => p.id == _profile.id,
+      orElse: () => _profile,
+    );
+    if (!mounted) return;
+    setState(() => _profile = updated);
+  }
+
+  /// The installed apps for these package names (uninstalled ones are skipped).
+  List<AppInfo> _resolveApps(Iterable<String> packageNames) {
+    return _allApps
         .where((app) => packageNames.contains(app.packageName))
         .toList();
   }
 
-  Future<void> _refreshProfile() async {
-    final all = await blocker.getProfiles();
-    final updated = all.firstWhere(
-      (p) => p.id == currentProfile.id,
-      orElse: () => currentProfile,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      currentProfile = updated;
-    });
-  }
-
-  Future<void> _loadAlwaysAvailableApps() async {
-    final alwaysAvailable = await store.getAlwaysAvailableApps(
-      currentProfile.id,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      alwaysAvailableApps = getHardAlwaysAvailableApps(alwaysAvailable.toSet());
-    });
-  }
-
-  Future<bool> _editingAllowed() async {
-    if (!await SessionStore().isActive()) return true;
-    if (mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Profiles can't be edited during a session. End the session first.",
-            ),
-          ),
-        );
-    }
-    return false;
-  }
+  // ------------------------------------------------------------------
+  // Actions
+  // ------------------------------------------------------------------
 
   Future<void> _renameProfile() async {
-    if (!await _editingAllowed()) return;
+    if (!await profileEditingAllowed(context)) return;
     if (!mounted) return;
 
-    final meta = metaFor(currentProfile.id);
-
-    if (meta.isCore) {
+    if (metaFor(_profile.id).isCore) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Core profiles cannot be renamed')),
       );
       return;
     }
 
-    final controller = TextEditingController(text: currentProfile.name);
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename Profile'),
-        content: TextField(controller: controller, autofocus: true),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+    final newName = await showTextInputDialog(
+      context,
+      title: 'Rename Profile',
+      initialValue: _profile.name,
+      confirmLabel: 'Save',
+      autofocus: true,
     );
-
     if (newName == null || newName.trim().isEmpty) return;
 
-    await blocker.updateProfile(
+    await _blocker.updateProfile(
       BlockProfile(
-        id: currentProfile.id,
+        id: _profile.id,
         name: newName.trim(),
-        appIdentifiers: currentProfile.appIdentifiers,
+        appIdentifiers: _profile.appIdentifiers,
       ),
     );
-
     profilesChanged.value++;
-
     await _refreshProfile();
   }
 
   Future<void> _deleteProfile() async {
-    if (!await _editingAllowed()) return;
+    if (!await profileEditingAllowed(context)) return;
     if (!mounted) return;
 
-    final meta = metaFor(currentProfile.id);
-
-    if (meta.isCore) {
+    if (metaFor(_profile.id).isCore) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "${currentProfile.name} is built into Rest For More and can't be deleted. You can still customize which apps it blocks.",
+            "${_profile.name} is built into Rest For More and can't be deleted. You can still customize which apps it blocks.",
           ),
         ),
       );
@@ -168,60 +141,87 @@ class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
       context,
       title: 'Delete profile?',
       message:
-          'This will permanently delete the ${currentProfile.name} profile. '
+          'This will permanently delete the ${_profile.name} profile. '
           'Are you sure?',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
     );
     if (!confirmed || !mounted) return;
 
-    await blocker.deleteProfile(currentProfile.id);
-    await store.removeProfile(currentProfile.id);
-
+    await _blocker.deleteProfile(_profile.id);
+    await _store.removeProfile(_profile.id);
     profilesChanged.value++;
 
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _editBlockedApps() async {
+    if (!await profileEditingAllowed(context)) return;
+    if (!mounted) return;
+
+    final changed = await context.push<bool>(
+      '/settings/focus-profiles/detail/blocked-apps',
+      extra: _profile,
+    );
+    if (changed != true) return;
+
+    await _refreshProfile();
+    profilesChanged.value++;
     if (mounted) {
-      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Blocked apps updated successfully')),
+      );
     }
   }
 
-  Widget _buildAppCard(List<AppInfo> apps) {
-    return Column(
-      children: apps.map((app) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: app.icon != null
-                ? Image.memory(app.icon!, width: 32, height: 32)
-                : const Icon(Icons.apps),
-            title: Text(app.appName),
-          ),
-        );
-      }).toList(),
+  Future<void> _editAlwaysAvailableApps() async {
+    if (!await profileEditingAllowed(context)) return;
+    if (!mounted) return;
+
+    final changed = await context.push<bool>(
+      '/settings/focus-profiles/detail/always-available',
+      extra: _profile,
     );
+    if (changed != true) return;
+
+    await _loadAlwaysAvailableApps();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Always available apps updated successfully'),
+        ),
+      );
+    }
   }
+
+  // ------------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
-    final blockedApps = _resolveApps(currentProfile.appIdentifiers);
-    final resolvedAlwaysAvailableApps = _resolveApps(
-      alwaysAvailableApps.toList(),
-    );
-    final meta = metaFor(currentProfile.id);
+    final blockedApps = _resolveApps(_profile.appIdentifiers);
+    final alwaysAvailableApps = _resolveApps(_alwaysAvailableApps);
+    final meta = metaFor(_profile.id);
+    final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(title: Text(currentProfile.name)),
+      appBar: AppBar(title: Text(_profile.name)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Row(
             children: [
-              Icon(meta.icon, size: 40, color: AppColors.mediumbrown),
+              Icon(meta.icon, size: 40, color: palette.accent),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  currentProfile.name,
-                  style: AppFonts.cormorant(size: 24, weight: FontWeight.w600),
+                  _profile.name,
+                  style: AppFonts.cormorant(
+                    size: 24,
+                    weight: FontWeight.w600,
+                    color: palette.text,
+                  ),
                 ),
               ),
               IconButton(
@@ -235,78 +235,47 @@ class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
             ],
           ),
           const Divider(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Blocked apps · ${blockedApps.length} blocked',
-                  style: AppFonts.manrope(size: 15, weight: FontWeight.w600),
-                ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (!await _editingAllowed()) return;
-                  if (!context.mounted) return;
-                  final changed = await context.push<bool>(
-                    '/settings/focus-profiles/detail/blocked-apps',
-                    extra: currentProfile,
-                  );
-                  if (changed == true) {
-                    await _refreshProfile();
-
-                    profilesChanged.value++;
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Blocked apps updated successfully'),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Text('edit'),
-              ),
-            ],
+          _SectionHeader(
+            title: 'Blocked apps · ${blockedApps.length} blocked',
+            onEdit: _editBlockedApps,
           ),
-          _buildAppCard(blockedApps),
+          AppInfoList(apps: blockedApps),
           const Divider(height: 32),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Always available apps · ${resolvedAlwaysAvailableApps.length} available',
-                  style: AppFonts.manrope(size: 15, weight: FontWeight.w600),
-                ),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (!await _editingAllowed()) return;
-                  if (!context.mounted) return;
-                  final changed = await context.push<bool>(
-                    '/settings/focus-profiles/detail/always-available',
-                    extra: currentProfile,
-                  );
-                  if (changed == true) {
-                    await _loadAlwaysAvailableApps();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Always available apps updated successfully',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: const Text('edit'),
-              ),
-            ],
+          _SectionHeader(
+            title:
+                'Always available apps · ${alwaysAvailableApps.length} available',
+            onEdit: _editAlwaysAvailableApps,
           ),
-          _buildAppCard(resolvedAlwaysAvailableApps),
+          AppInfoList(apps: alwaysAvailableApps),
         ],
       ),
+    );
+  }
+}
+
+/// Section title with an "edit" button on the right.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, required this.onEdit});
+
+  final String title;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: AppFonts.manrope(
+              size: 15,
+              weight: FontWeight.w600,
+              color: context.palette.text,
+            ),
+          ),
+        ),
+        TextButton(onPressed: onEdit, child: const Text('edit')),
+      ],
     );
   }
 }

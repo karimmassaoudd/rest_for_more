@@ -1,9 +1,10 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Remembers whether the user already made a choice on the Welcome screen
-/// (create account, log in or continue as guest). REST-96 / REST-97.
+/// Remembers whether the user already chose how to start on the Welcome
+/// screen: create an account, log in, or continue as a guest.
 ///
-/// Loaded once in main() so the router can check it without waiting.
+/// Loaded once in main(), so the router can read [hasChosen] straight away
+/// without waiting for storage.
 class WelcomeChoiceStore {
   WelcomeChoiceStore._();
   static final WelcomeChoiceStore instance = WelcomeChoiceStore._();
@@ -12,7 +13,7 @@ class WelcomeChoiceStore {
 
   bool _chosen = false;
 
-  /// True after the user chose how to start. Then Welcome is skipped.
+  /// True once the user has chosen; the router then skips Welcome.
   bool get hasChosen => _chosen;
 
   /// Call once in main(), before runApp().
@@ -21,14 +22,14 @@ class WelcomeChoiceStore {
     _chosen = prefs.getBool(_key) ?? false;
   }
 
-  /// Guest chosen, account created or logged in.
+  /// After choosing guest, creating an account or logging in.
   Future<void> markChosen() async {
     _chosen = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_key, true);
   }
 
-  /// Show Welcome again after log out or delete account (REST-101, story 8).
+  /// Shows Welcome again, after logging out or deleting the account.
   Future<void> clearChoice() async {
     _chosen = false;
     final prefs = await SharedPreferences.getInstance();

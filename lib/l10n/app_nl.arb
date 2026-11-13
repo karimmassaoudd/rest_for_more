@@ -1,6 +1,12 @@
+
 {
   "@@locale": "nl",
-  "welcomeTitle": "Welkom bij Rest For More",
+
+  "welcomeTitle": "Welkom bij\nRest For More",
+  "welcomeSubtitle": "Leg je telefoon weg en bouw rustige routines.\nEen RestNest is optioneel.",
+  "welcomeGetStarted": "Aan de slag",
+  "welcomeHaveAccount": "Heb je al een account?",
+  "welcomeLogIn": "Inloggen",
 
   "languageTitle": "Kies je taal",
   "languageSubtitle": "Je kunt dit later wijzigen in je profielinstellingen.",
@@ -20,5 +26,40 @@
 
   "tutorialStart": "Starten",
   "tutorialNext": "Volgende",
-  "tutorialBack": "Terug"
+  "tutorialBack": "Terug",
+
+  "tutorialDone": "Klaar",
+  "profileHelp": "Hulp",
+  "profileManual": "Zo werkt Rest For More",
+
+  "profileLanguageDone": "Gereed",
+
+  "profileTitle": "Profiel",
+  "profileAppearance": "Weergave",
+  "profileLanguage": "Taal",
+  "profileChooseLanguage": "Kies je taal",
+  "profileYourData": "Jouw gegevens",
+  "profileAccount": "Account",
+  "profileGuestTitle": "Je gebruikt Rest For More als gast",
+  "profileGuestDescription": "Je gegevens worden alleen op deze telefoon opgeslagen.",
+  "profileCreateAccount": "Account aanmaken om je gegevens te bewaren",
+  "profileLogin": "Inloggen",
+  "profileLogout": "Uitloggen",
+  "profileLogoutTitle": "Uitloggen?",
+  "profileLogoutMessage": "Je focusprofielen en routines blijven op deze telefoon staan.",
+  "profileDelete": "Account verwijderen",
+  "profileDeleteTitle": "Je account verwijderen?",
+  "profileDeleteMessage": "Je account en back-upgegevens worden permanent verwijderd. Dit kan niet ongedaan worden gemaakt.",
+  "profileBackup": "Maak een back-up van mijn gegevens",
+  "profileLastBackup": "Laatste back-up: nooit",
+  "profileComingSoon": "Binnenkort beschikbaar",
+  "profileAppearanceLight": "Licht",
+  "profileAppearanceDark": "Donker",
+  "profileAppearanceSystem": "Systeem",
+  "profileAppearanceSemantics": "Weergave: {selected}. Binnenkort beschikbaar",
+  "@profileAppearanceSemantics": {
+    "placeholders": {
+      "selected": {}
+    }
+  }
 }

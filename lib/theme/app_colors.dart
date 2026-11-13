@@ -1,47 +1,35 @@
 import 'package:flutter/material.dart';
 
-import '../models/routines/routine_step.dart';
-/// Branding colors for the whole application
-class AppColors {
-  static const background = Color(0xFFFAF8F4);
+import 'app_palette.dart';
+
+/// Rest For More colours: the six brand colours, a few role names built
+/// from them, and supporting colours that never change with the theme.
+///
+/// Inside widgets, prefer `context.palette` so colours follow light/dark
+/// mode. Use [AppColors] directly only for fixed colours (error, the
+/// moon, text on yellow) and in services, which have no `context`.
+abstract final class AppColors {
+  // ----- Brand -----
+  static const backgroundWhite = Color(0xFFFAF8F4);
   static const surface = Color(0xFFEBE6DA);
-  static const lightbrown = Color(0xFF9F755C);
-  static const mediumbrown = Color(0xFF7B563D);
-  static const darkbrown = Color(0xFF4E3B31);
-  static const yellowhighlight = Color(0xFFFFB60A);
-  
-  static const card = Color(0xFFEDE8DC);
-  static const border = Color(0xFFD3BCA8);
-  static const text = Color(0xFF51443B);
-  static const muted = Color(0xFFA88670);
-  static const brown = Color(0xFF8A6449);
-  static const brownSoft = Color(0xFFE7DDD0);
-  static const buttonText = Color(0xFFFFFCF8);
+  static const lightBrown = Color(0xFF9F755C);
+  static const mediumBrown = Color(0xFF7B563D);
+  static const darkBrown = Color(0xFF4E3B31);
+  static const highlightYellow = Color(0xFFFFB60A);
 
-  static const morningBackground = background;
-  static const morningCard = card;
-  static const morningBorder = border;
-  static const morningText = text;
-  static const morningMuted = muted;
-  static const sage = brown;
-  static const sageSoft = brownSoft;
-  static const amber = Color(0xFFB98965);
-  static const amberSoft = brownSoft;
+  // ----- Roles (light mode) -----
+  static const text = darkBrown;
+  static const muted = lightBrown;
+  static const border = lightBrown;
+  static const buttonText = backgroundWhite;
 
-  static const eveningBackground = Color(0xFF211B18);
-  static const eveningSurface = Color(0xFF2A231F);
-  static const eveningCard = Color(0xFF342B26);
-  static const eveningBorder = Color(0xFF514238);
-  static const eveningText = Color(0xFFF6EFE7);
-  static const eveningMuted = Color(0xFFBDAA98);
-  static const eveningAmber = Color(0xFFD6A46F);
-  static const eveningAccentSoft = Color(0xFF493A2E);
-  static const eveningButton = Color(0xFFE0B27D);
-  static const eveningButtonText = Color(0xFF2B211B);
-  static const moonSage = Color(0xFFAAB7A2);
-  static const espresso = brown;
+  // ----- Supporting -----
+  static const moon = Color(0xFFFFC857);
+  static const error = Color(0xFFB0473A);
 }
-//this color palette is giving a lot of headages in git
+
+/// Routine colours, taken from the app theme (light or dark), so morning
+/// and evening routines are light in light mode and dark in dark mode.
 class RoutinePalette {
   const RoutinePalette({
     required this.background,
@@ -56,33 +44,19 @@ class RoutinePalette {
     required this.buttonText,
   });
 
-  factory RoutinePalette.forPeriod(RoutinePeriod period) {
-    if (period == RoutinePeriod.morning) {
-      return const RoutinePalette(
-        background: AppColors.morningBackground,
-        surface: AppColors.surface,
-        card: AppColors.morningCard,
-        border: AppColors.morningBorder,
-        text: AppColors.morningText,
-        muted: AppColors.morningMuted,
-        accent: AppColors.sage,
-        accentSoft: AppColors.sageSoft,
-        button: AppColors.brown,
-        buttonText: AppColors.buttonText,
-      );
-    }
-
-    return const RoutinePalette(
-      background: AppColors.eveningBackground,
-      surface: AppColors.eveningSurface,
-      card: AppColors.eveningCard,
-      border: AppColors.eveningBorder,
-      text: AppColors.eveningText,
-      muted: AppColors.eveningMuted,
-      accent: AppColors.eveningAmber,
-      accentSoft: AppColors.eveningAccentSoft,
-      button: AppColors.eveningButton,
-      buttonText: AppColors.eveningButtonText,
+  factory RoutinePalette.of(BuildContext context) {
+    final p = context.palette;
+    return RoutinePalette(
+      background: p.background,
+      surface: p.surface,
+      card: p.card,
+      border: p.border,
+      text: p.text,
+      muted: p.muted,
+      accent: p.accent,
+      accentSoft: p.accentSoft,
+      button: p.accent,
+      buttonText: p.onAccent,
     );
   }
 
