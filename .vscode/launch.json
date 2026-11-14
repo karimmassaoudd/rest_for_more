@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rest For More",
+      "request": "launch",
+      "type": "dart",
+      "args": ["--dart-define-from-file=clerk.json"]
+    }
+  ]
+}

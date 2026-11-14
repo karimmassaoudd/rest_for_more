@@ -1,6 +1,6 @@
 {
-    "name": "rest_for_more",
-    "short_name": "rest_for_more",
+    "name": "flutter_application_rest_for_more",
+    "short_name": "flutter_application_rest_for_more",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

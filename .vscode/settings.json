@@ -1,5 +1,6 @@
 {
   "gitlens.ai.model": "vscode",
   "cmake.sourceDirectory": "${workspaceFolder}/linux",
-  "cmake.configureOnOpen": false
+  "cmake.configureOnOpen": false,
+  "dart.flutterRunAdditionalArgs": ["--dart-define-from-file=clerk.json"]
 }
