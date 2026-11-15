@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/routines/routine_step.dart';
@@ -11,6 +13,7 @@ class RoutineProgressStorage {
 
   static const _morningKey = 'routine_progress_morning';
   static const _eveningKey = 'routine_progress_evening';
+  static const _historyKey = 'routine_history_v1';
 
   String _keyFor(RoutinePeriod period) => switch (period) {
     RoutinePeriod.morning => _morningKey,
@@ -35,4 +38,50 @@ class RoutineProgressStorage {
         .toList();
     await preferences.setStringList(_keyFor(period), completedTitles);
   }
+
+  Future<List<RoutineDayRecord>> loadHistory() async {
+    final preferences = await SharedPreferences.getInstance();
+    final raw = preferences.getString(_historyKey);
+    if (raw == null) return [];
+    try {
+      final records = (jsonDecode(raw) as List<dynamic>)
+          .map(
+            (value) => RoutineDayRecord.fromJson(value as Map<String, dynamic>),
+          )
+          .toList();
+      records.sort((a, b) => a.date.compareTo(b.date));
+      return records;
+    } on FormatException {
+      return [];
+    }
+  }
+
+  Future<void> saveToday({
+    required Iterable<RoutineStep> morningSteps,
+    required Iterable<RoutineStep> eveningSteps,
+    DateTime? now,
+  }) => saveDay(
+    RoutineDayRecord(
+      date: _dateKey(now ?? DateTime.now()),
+      morningCompleted: morningSteps.where((step) => step.isCompleted).length,
+      morningTotal: morningSteps.length,
+      eveningCompleted: eveningSteps.where((step) => step.isCompleted).length,
+      eveningTotal: eveningSteps.length,
+    ),
+  );
+
+  Future<void> saveDay(RoutineDayRecord record) async {
+    final records = await loadHistory();
+    records.removeWhere((item) => item.date == record.date);
+    records.add(record);
+    records.sort((a, b) => a.date.compareTo(b.date));
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(
+      _historyKey,
+      jsonEncode(records.map((item) => item.toJson()).toList()),
+    );
+  }
+
+  String _dateKey(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 }

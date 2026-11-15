@@ -24,6 +24,8 @@ dependencies:
 
   # Focus sessions: notifications, alarms and the iOS live activity
   flutter_local_notifications: ^19.0.0
+  flutter_timezone: ^4.1.1
+  timezone: ^0.10.1
   alarm: ^5.15.0
   live_activity_kit: ^1.1.1
 

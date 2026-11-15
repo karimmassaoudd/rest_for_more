@@ -19,8 +19,7 @@ const _sleepActivityName = 'Slapen';
 /// Editor for the evening routine (Settings → Edit routines):
 /// set the bedtime, and add, edit or delete evening activities.
 ///
-/// Only the bedtime is saved for now; activity changes last until the
-/// page is closed.
+/// Bedtime and activity changes are persisted when the user saves.
 class EveningPage extends StatefulWidget {
   const EveningPage({
     super.key,
@@ -35,7 +34,7 @@ class EveningPage extends StatefulWidget {
 }
 
 class _EveningPageState extends State<EveningPage> {
-  late final List<Activity> _activities;
+  late List<Activity> _activities;
   String _sleepTime = defaultRoutineSleepTime;
   bool _isSaving = false;
 
@@ -43,7 +42,7 @@ class _EveningPageState extends State<EveningPage> {
   void initState() {
     super.initState();
     _activities = widget.activitiesStorage.getActivities();
-    unawaited(_loadSleepTime());
+    unawaited(_loadRoutine());
   }
 
   /// Bedtime last, everything else by time.
@@ -63,12 +62,16 @@ class _EveningPageState extends State<EveningPage> {
   // Bedtime
   // ------------------------------------------------------------------
 
-  Future<void> _loadSleepTime() async {
+  Future<void> _loadRoutine() async {
     try {
-      final sleepTime = await widget.activitiesStorage.loadRoutineSleepTime();
+      final result = await Future.wait([
+        widget.activitiesStorage.loadRoutineSleepTime(),
+        widget.activitiesStorage.loadActivities(),
+      ]);
       if (!mounted) return;
       setState(() {
-        _sleepTime = sleepTime;
+        _sleepTime = result[0] as String;
+        _activities = result[1] as List<Activity>;
         _updateSleepActivityTime();
       });
     } catch (error) {
@@ -109,6 +112,7 @@ class _EveningPageState extends State<EveningPage> {
     setState(() => _isSaving = true);
     try {
       await widget.activitiesStorage.saveRoutineSleepTime(_sleepTime);
+      await widget.activitiesStorage.saveActivities(_activities);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Routine opgeslagen.')));

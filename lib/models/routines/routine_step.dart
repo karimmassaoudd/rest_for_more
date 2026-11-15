@@ -31,3 +31,42 @@ class RoutineStep {
     );
   }
 }
+
+/// A snapshot of morning and evening completion for one calendar day.
+class RoutineDayRecord {
+  const RoutineDayRecord({
+    required this.date,
+    required this.morningCompleted,
+    required this.morningTotal,
+    required this.eveningCompleted,
+    required this.eveningTotal,
+  });
+
+  final String date;
+  final int morningCompleted;
+  final int morningTotal;
+  final int eveningCompleted;
+  final int eveningTotal;
+
+  double get morningProgress =>
+      morningTotal == 0 ? 0 : morningCompleted / morningTotal;
+  double get eveningProgress =>
+      eveningTotal == 0 ? 0 : eveningCompleted / eveningTotal;
+
+  Map<String, Object> toJson() => {
+    'date': date,
+    'morningCompleted': morningCompleted,
+    'morningTotal': morningTotal,
+    'eveningCompleted': eveningCompleted,
+    'eveningTotal': eveningTotal,
+  };
+
+  factory RoutineDayRecord.fromJson(Map<String, dynamic> json) =>
+      RoutineDayRecord(
+        date: json['date'] as String,
+        morningCompleted: json['morningCompleted'] as int? ?? 0,
+        morningTotal: json['morningTotal'] as int? ?? 0,
+        eveningCompleted: json['eveningCompleted'] as int? ?? 0,
+        eveningTotal: json['eveningTotal'] as int? ?? 0,
+      );
+}

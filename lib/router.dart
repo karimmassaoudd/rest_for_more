@@ -139,14 +139,24 @@ final GoRouter router = GoRouter(
 
     // ----- Routines -----
     GoRoute(
+      path: '/routine',
+      builder: (context, state) {
+        final evening = state.uri.queryParameters['period'] == 'evening';
+        return RoutineScreen(
+          initialPeriod: evening
+              ? RoutinePeriod.evening
+              : RoutinePeriod.morning,
+          autoStartFlow: state.uri.queryParameters['start'] == 'true',
+        );
+      },
+    ),
+    GoRoute(
       path: '/routine/morning',
-      builder: (context, state) =>
-          const RoutineScreen(initialPeriod: RoutinePeriod.morning),
+      redirect: (_, _) => '/routine?period=morning',
     ),
     GoRoute(
       path: '/routine/evening',
-      builder: (context, state) =>
-          const RoutineScreen(initialPeriod: RoutinePeriod.evening),
+      redirect: (_, _) => '/routine?period=evening',
     ),
     GoRoute(
       path: '/settings/routines',

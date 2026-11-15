@@ -6,6 +6,7 @@ import '../../models/routines/default_routine_steps.dart';
 import '../../models/routines/routine_step.dart';
 import '../../models/routines/routine_time.dart';
 import '../../services/routines/routine_progress_storage.dart';
+import '../../services/routines/routine_reminder_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/routines/active_routine_card.dart';
 import '../../widgets/routines/bottom_action_dock.dart';
@@ -13,12 +14,15 @@ import '../../widgets/routines/completion_banner.dart';
 import '../../widgets/routines/greeting_header.dart';
 import '../../widgets/routines/routine_action_sheets.dart';
 import '../../widgets/routines/routine_item_card.dart';
+import '../../widgets/routines/routine_period_switcher.dart';
 import '../../widgets/routines/steps_heading.dart';
 import '../../widgets/routines/task_preview.dart';
-import 'focus_mode_screen.dart';
+import 'routine_flow_screen.dart';
+import 'routine_history_screen.dart';
+import 'reminder_settings_screen.dart';
 
 /// The morning or evening routine: progress, the list of steps to tick off,
-/// adding steps, and a guided "focus mode" for the next open step.
+/// adding steps, and a guided flow through the remaining activities.
 ///
 /// Morning uses the light [RoutinePalette], evening the dark one.
 /// Ticked-off steps are saved per period, so they survive a restart.
@@ -26,10 +30,12 @@ class RoutineScreen extends StatefulWidget {
   const RoutineScreen({
     super.key,
     this.initialPeriod = RoutinePeriod.morning,
+    this.autoStartFlow = false,
     this.progressStorage = const RoutineProgressStorage(),
   });
 
   final RoutinePeriod initialPeriod;
+  final bool autoStartFlow;
 
   /// Replaceable in tests.
   final RoutineProgressStorage progressStorage;
@@ -85,7 +91,15 @@ class _RoutineScreenState extends State<RoutineScreen> {
   void initState() {
     super.initState();
     _period = widget.initialPeriod;
-    unawaited(_loadProgress());
+    unawaited(_loadInitialRoutine());
+  }
+
+  Future<void> _loadInitialRoutine() async {
+    await _loadProgress();
+    if (!widget.autoStartFlow || !mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_startRoutineFlow());
+    });
   }
 
   Future<void> _loadProgress() async {
@@ -124,6 +138,11 @@ class _RoutineScreenState extends State<RoutineScreen> {
         period,
         _stepsFor(period),
       );
+      await widget.progressStorage.saveToday(
+        morningSteps: _morningSteps,
+        eveningSteps: _eveningSteps,
+      );
+      unawaited(RoutineReminderService().refreshIfEnabled());
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -148,21 +167,55 @@ class _RoutineScreenState extends State<RoutineScreen> {
     unawaited(_saveProgress(period));
   }
 
-  /// Marks a step done after focus mode (ignored if the user switched period).
-  void _completeStep(int index, RoutinePeriod period) {
-    if (_period != period) return;
-    final source = _stepsFor(period);
-    if (source[index].isCompleted) return;
+  /// Starts a fresh routine day by clearing both periods' saved completion.
+  Future<void> _refreshRoutine() async {
+    final previousMorning = _morningSteps;
+    final previousEvening = _eveningSteps;
+    final freshMorning = previousMorning
+        .map((step) => step.copyWith(isCompleted: false))
+        .toList();
+    final freshEvening = previousEvening
+        .map((step) => step.copyWith(isCompleted: false))
+        .toList();
 
     setState(() {
-      final updated = List<RoutineStep>.of(source);
-      updated[index] = updated[index].copyWith(isCompleted: true);
-      _setSteps(period, updated);
+      _period = RoutinePeriod.morning;
+      _morningSteps = freshMorning;
+      _eveningSteps = freshEvening;
     });
-    unawaited(_saveProgress(period));
+    try {
+      await Future.wait([
+        widget.progressStorage.saveCompletedTasks(
+          RoutinePeriod.morning,
+          freshMorning,
+        ),
+        widget.progressStorage.saveCompletedTasks(
+          RoutinePeriod.evening,
+          freshEvening,
+        ),
+      ]);
+      await widget.progressStorage.saveToday(
+        morningSteps: freshMorning,
+        eveningSteps: freshEvening,
+      );
+      unawaited(RoutineReminderService().refreshIfEnabled());
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your routines are ready for a fresh start.'),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _morningSteps = previousMorning;
+        _eveningSteps = previousEvening;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not restart your routines.')),
+      );
+    }
   }
-
-  Future<void> _refreshRoutine() => _loadProgress();
 
   Future<void> _addStep() async {
     final period = _period;
@@ -212,8 +265,8 @@ class _RoutineScreenState extends State<RoutineScreen> {
     if (result.resetProgress) unawaited(_saveProgress(period));
   }
 
-  /// Opens focus mode for the first open step; ticks it off if completed there.
-  Future<void> _enterFocusMode() async {
+  /// Opens the remaining activities as one continuous routine.
+  Future<void> _startRoutineFlow() async {
     final period = _period;
     final index = _steps.indexWhere((step) => !step.isCompleted);
     if (index == -1) {
@@ -229,17 +282,38 @@ class _RoutineScreenState extends State<RoutineScreen> {
       return;
     }
 
-    final completed = await Navigator.of(context).push<bool>(
+    await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) => FocusModeScreen(
+        builder: (_) => RoutineFlowScreen(
           period: period,
-          step: _steps[index],
-          nextStep: _nextIncompleteStep(index),
-          palette: RoutinePalette.of(context),
+          steps: _steps,
+          onStepCompleted: (stepIndex) =>
+              _completeStepAndSave(stepIndex, period),
         ),
       ),
     );
-    if (completed == true && mounted) _completeStep(index, period);
+  }
+
+  Future<void> _completeStepAndSave(int index, RoutinePeriod period) async {
+    final source = _stepsFor(period);
+    if (index < 0 || index >= source.length || source[index].isCompleted) {
+      return;
+    }
+    final original = source;
+    final updated = List<RoutineStep>.of(source);
+    updated[index] = updated[index].copyWith(isCompleted: true);
+    if (mounted) setState(() => _setSteps(period, updated));
+    try {
+      await widget.progressStorage.saveCompletedTasks(period, updated);
+      await widget.progressStorage.saveToday(
+        morningSteps: period == RoutinePeriod.morning ? updated : _morningSteps,
+        eveningSteps: period == RoutinePeriod.evening ? updated : _eveningSteps,
+      );
+      unawaited(RoutineReminderService().refreshIfEnabled());
+    } catch (_) {
+      if (mounted) setState(() => _setSteps(period, original));
+      rethrow;
+    }
   }
 
   // ------------------------------------------------------------------
@@ -302,6 +376,49 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           totalMinutes: _totalMinutes,
                         ),
                         const SizedBox(height: 12),
+                        RoutinePeriodSwitcher(
+                          period: _period,
+                          palette: palette,
+                          onChanged: (period) =>
+                              setState(() => _period = period),
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.center,
+                          child: Wrap(
+                            spacing: 4,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => RoutineHistoryScreen(
+                                      storage: widget.progressStorage,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.calendar_month_outlined,
+                                  size: 16,
+                                ),
+                                label: const Text('View history'),
+                              ),
+                              TextButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ReminderSettingsScreen(),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.notifications_outlined,
+                                  size: 16,
+                                ),
+                                label: const Text('Reminders'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         TaskPreview(
                           currentStep: currentStep,
                           nextStep: nextStep,
@@ -335,7 +452,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                         BottomActionDock(
                           period: _period,
                           palette: palette,
-                          onEnterFocusMode: _enterFocusMode,
+                          onStartRoutine: _startRoutineFlow,
                         ),
                         const SizedBox(height: 10),
                         Text(
