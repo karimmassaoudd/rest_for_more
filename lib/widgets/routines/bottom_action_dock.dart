@@ -4,17 +4,17 @@ import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
 /// The big "Start your morning" / "Start evening" button at the bottom
-/// of the routine screen; opens focus mode for the next open step.
+/// of the routine screen; opens the guided routine flow.
 class BottomActionDock extends StatelessWidget {
   const BottomActionDock({
     super.key,
     required this.period,
     required this.palette,
-    required this.onEnterFocusMode,
+    required this.onStartRoutine,
   });
   final RoutinePeriod period;
   final RoutinePalette palette;
-  final VoidCallback onEnterFocusMode;
+  final VoidCallback onStartRoutine;
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +23,8 @@ class BottomActionDock extends StatelessWidget {
       width: double.infinity,
       height: 50,
       child: FilledButton(
-        key: const Key('focus-mode-button'),
-        onPressed: onEnterFocusMode,
+        key: const Key('start-routine-flow-button'),
+        onPressed: onStartRoutine,
         style: FilledButton.styleFrom(
           backgroundColor: palette.button,
           foregroundColor: palette.buttonText,
