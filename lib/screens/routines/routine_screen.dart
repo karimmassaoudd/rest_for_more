@@ -18,7 +18,6 @@ import '../../widgets/routines/routine_period_switcher.dart';
 import '../../widgets/routines/steps_heading.dart';
 import '../../widgets/routines/task_preview.dart';
 import 'routine_flow_screen.dart';
-import 'routine_history_screen.dart';
 import 'reminder_settings_screen.dart';
 
 /// The morning or evening routine: progress, the list of steps to tick off,
@@ -388,20 +387,6 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           child: Wrap(
                             spacing: 4,
                             children: [
-                              TextButton.icon(
-                                onPressed: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => RoutineHistoryScreen(
-                                      storage: widget.progressStorage,
-                                    ),
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.calendar_month_outlined,
-                                  size: 16,
-                                ),
-                                label: const Text('View history'),
-                              ),
                               TextButton.icon(
                                 onPressed: () => Navigator.of(context).push(
                                   MaterialPageRoute(

@@ -35,7 +35,7 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
       backgroundColor: palette.background,
       appBar: AppBar(
         title: Text(
-          'Routine history',
+          'Progress',
           style: AppFonts.cormorant(size: 28, weight: FontWeight.w600),
         ),
       ),

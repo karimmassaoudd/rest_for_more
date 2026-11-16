@@ -19,6 +19,7 @@ import 'screens/onboarding/tutorial_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/routines/routine_editor.dart';
+import 'screens/routines/routine_history_screen.dart';
 import 'screens/routines/routine_screen.dart';
 import 'screens/settings/placeholder_screen.dart';
 import 'screens/settings/routine_settings_screen.dart';
@@ -188,8 +189,7 @@ final GoRouter router = GoRouter(
           routes: [
             GoRoute(
               path: '/progress',
-              builder: (context, state) =>
-                  const PlaceholderScreen(title: 'Progress'),
+              builder: (context, state) => const RoutineHistoryScreen(),
             ),
           ],
         ),
