@@ -7,6 +7,7 @@ import '../../models/routines/routine_step.dart';
 import '../../models/routines/routine_time.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 
 /// Guides a complete morning or evening routine without returning to its
 /// overview between activities.
@@ -63,7 +64,8 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
 
   void _resetTimer() {
     _timer?.cancel();
-    _totalSeconds = (minutesInDuration(widget.steps[_currentIndex].duration) ?? 5) * 60;
+    _totalSeconds =
+        (minutesInDuration(widget.steps[_currentIndex].duration) ?? 5) * 60;
     _secondsRemaining = _totalSeconds;
     _isTimerRunning = true;
     _startTimer();
@@ -112,7 +114,9 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
       if (!mounted) return;
       setState(() => _isCompleting = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not save routine progress. Please try again.')),
+        const SnackBar(
+          content: Text('Could not save routine progress. Please try again.'),
+        ),
       );
     }
   }
@@ -125,20 +129,13 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     final step = isComplete ? null : widget.steps[_currentIndex];
     final nextIndex = isComplete ? -1 : _nextIncompleteIndex(_currentIndex + 1);
     final nextStep = nextIndex == -1 ? null : widget.steps[nextIndex];
-    final routineName = widget.period == RoutinePeriod.morning ? 'Morning' : 'Evening';
+    final routineName = widget.period == RoutinePeriod.morning
+        ? 'Morning'
+        : 'Evening';
 
     return Scaffold(
       backgroundColor: palette.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        foregroundColor: palette.text,
-        elevation: 0,
-        leading: IconButton(
-          tooltip: 'Return to routine overview',
-          onPressed: () => Navigator.maybePop(context),
-          icon: const Icon(Icons.close_rounded),
-        ),
-      ),
+      appBar: rfmScaffoldAppBar(title: routineName),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -148,7 +145,9 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
               _StatusIcon(isComplete: isComplete, palette: palette),
               const SizedBox(height: 22),
               Text(
-                isComplete ? '$routineName routine complete' : '$routineName routine',
+                isComplete
+                    ? '$routineName routine complete'
+                    : '$routineName routine',
                 key: const Key('routine-flow-heading'),
                 style: AppFonts.montserrat(
                   size: 11,
@@ -172,7 +171,9 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
               const SizedBox(height: 10),
               if (isComplete)
                 Text(
-                  isEmpty ? 'Add activities from the routine overview to begin.' : 'Every activity is saved.',
+                  isEmpty
+                      ? 'This routine has no activities yet.'
+                      : 'Every activity is saved.',
                   textAlign: TextAlign.center,
                   style: AppFonts.manrope(size: 13, color: palette.muted),
                 )
@@ -180,23 +181,48 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                 Text(
                   'Activity ${_currentIndex + 1} of ${widget.steps.length}',
                   key: const Key('routine-flow-progress'),
-                  style: AppFonts.montserrat(size: 11, weight: FontWeight.w600, color: palette.muted),
+                  style: AppFonts.montserrat(
+                    size: 11,
+                    weight: FontWeight.w600,
+                    color: palette.muted,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  nextStep == null ? 'This is your final activity.' : 'Next: ${nextStep.title}',
+                  nextStep == null
+                      ? 'This is your final activity.'
+                      : 'Next: ${nextStep.title}',
                   key: const Key('routine-flow-next-step'),
                   textAlign: TextAlign.center,
-                  style: AppFonts.manrope(size: 13, weight: FontWeight.w600, color: palette.muted),
+                  style: AppFonts.manrope(
+                    size: 13,
+                    weight: FontWeight.w600,
+                    color: palette.muted,
+                  ),
                 ),
                 const SizedBox(height: 22),
-                Expanded(child: Center(child: _TimerDisplay(seconds: _secondsRemaining, total: _totalSeconds, palette: palette))),
+                Expanded(
+                  child: Center(
+                    child: _TimerDisplay(
+                      seconds: _secondsRemaining,
+                      total: _totalSeconds,
+                      palette: palette,
+                    ),
+                  ),
+                ),
                 OutlinedButton.icon(
                   key: const Key('routine-flow-pause-button'),
                   onPressed: _toggleTimer,
-                  icon: Icon(_isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                  icon: Icon(
+                    _isTimerRunning
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                  ),
                   label: Text(_isTimerRunning ? 'Pause timer' : 'Resume timer'),
-                  style: OutlinedButton.styleFrom(foregroundColor: palette.text, side: BorderSide(color: palette.border)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: palette.text,
+                    side: BorderSide(color: palette.border),
+                  ),
                 ),
               ],
               const SizedBox(height: 20),
@@ -204,16 +230,39 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                 width: double.infinity,
                 height: 54,
                 child: FilledButton.icon(
-                  key: Key(isComplete ? 'return-to-overview-button' : 'complete-routine-step-button'),
-                  onPressed: _isCompleting ? null : (isComplete ? () => Navigator.maybePop(context) : _completeCurrentStep),
+                  key: Key(
+                    isComplete
+                        ? 'return-to-overview-button'
+                        : 'complete-routine-step-button',
+                  ),
+                  onPressed: _isCompleting
+                      ? null
+                      : (isComplete
+                            ? () => Navigator.maybePop(context)
+                            : _completeCurrentStep),
                   icon: _isCompleting
-                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Icon(isComplete ? Icons.arrow_back_rounded : Icons.check_rounded),
-                  label: Text(isComplete ? 'Return to overview' : (_isCompleting ? 'Saving...' : 'Complete activity')),
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          isComplete
+                              ? Icons.arrow_back_rounded
+                              : Icons.check_rounded,
+                        ),
+                  label: Text(
+                    isComplete
+                        ? 'Return to overview'
+                        : (_isCompleting ? 'Saving...' : 'Complete activity'),
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: palette.button,
                     foregroundColor: palette.buttonText,
-                    textStyle: AppFonts.manrope(size: 14, weight: FontWeight.w700),
+                    textStyle: AppFonts.manrope(
+                      size: 14,
+                      weight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
@@ -234,13 +283,26 @@ class _StatusIcon extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 68,
     height: 68,
-    decoration: BoxDecoration(color: palette.accentSoft, shape: BoxShape.circle),
-    child: Icon(isComplete ? Icons.check_circle_rounded : Icons.play_circle_outline_rounded, color: palette.accent, size: 32),
+    decoration: BoxDecoration(
+      color: palette.accentSoft,
+      shape: BoxShape.circle,
+    ),
+    child: Icon(
+      isComplete
+          ? Icons.check_circle_rounded
+          : Icons.play_circle_outline_rounded,
+      color: palette.accent,
+      size: 32,
+    ),
   );
 }
 
 class _TimerDisplay extends StatelessWidget {
-  const _TimerDisplay({required this.seconds, required this.total, required this.palette});
+  const _TimerDisplay({
+    required this.seconds,
+    required this.total,
+    required this.palette,
+  });
   final int seconds;
   final int total;
   final RoutinePalette palette;
@@ -253,10 +315,28 @@ class _TimerDisplay extends StatelessWidget {
     return SizedBox(
       width: math.min(MediaQuery.sizeOf(context).width - 48, 230),
       height: math.min(MediaQuery.sizeOf(context).width - 48, 230),
-      child: Stack(alignment: Alignment.center, children: [
-        SizedBox.expand(child: CircularProgressIndicator(value: progress, strokeWidth: 7, color: palette.accent, backgroundColor: palette.border.withValues(alpha: 0.35))),
-        Text('$minutes:$remainingSeconds', key: const Key('routine-flow-timer'), style: AppFonts.cormorant(size: 52, weight: FontWeight.w600, color: palette.text)),
-      ]),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox.expand(
+            child: CircularProgressIndicator(
+              value: progress,
+              strokeWidth: 7,
+              color: palette.accent,
+              backgroundColor: palette.border.withValues(alpha: 0.35),
+            ),
+          ),
+          Text(
+            '$minutes:$remainingSeconds',
+            key: const Key('routine-flow-timer'),
+            style: AppFonts.cormorant(
+              size: 52,
+              weight: FontWeight.w600,
+              color: palette.text,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

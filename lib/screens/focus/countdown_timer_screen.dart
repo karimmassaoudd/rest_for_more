@@ -8,7 +8,7 @@ import '../../services/focus/session_controller.dart';
 import '../../services/focus/timer_notification_service.dart';
 import '../../theme/app_fonts.dart';
 import '../../theme/app_palette.dart';
-import '../../widgets/common/rfm_logo.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/common/confirm_dialog.dart';
 import '../../widgets/focus/duration_presets.dart';
 import '../../widgets/focus/timer_dial.dart';
@@ -244,31 +244,7 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
 
   /// Back arrow, profile name and logo.
   Widget _buildHeader() {
-    final palette = context.palette;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Row(
-        children: [
-          InkWell(
-            // Opened from the notification there is nothing underneath,
-            // so go Home instead of popping (pop would do nothing).
-            onTap: () => context.canPop() ? context.pop() : context.go('/'),
-            customBorder: const CircleBorder(),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(Icons.arrow_back, size: 25, color: palette.accent),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            widget.profile.name,
-            style: AppFonts.montserrat(size: 15, color: palette.accent),
-          ),
-          const Spacer(),
-          RfmLogo(textColor: context.palette.muted),
-        ],
-      ),
-    );
+    return RfmAppBar(title: widget.profile.name);
   }
 
   Widget _buildIntro() {

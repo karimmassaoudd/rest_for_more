@@ -12,6 +12,7 @@ import '../../services/focus/profile_events.dart';
 import '../../theme/app_fonts.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/common/confirm_dialog.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/common/text_input_dialog.dart';
 import '../../widgets/focus/app_info_list.dart';
 
@@ -206,7 +207,7 @@ class _FocusProfileDetailScreenState extends State<FocusProfileDetailScreen> {
     final palette = context.palette;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_profile.name)),
+      appBar: rfmScaffoldAppBar(title: _profile.name),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

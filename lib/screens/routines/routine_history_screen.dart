@@ -4,6 +4,7 @@ import '../../models/routines/routine_step.dart';
 import '../../services/routines/routine_progress_storage.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 
 class RoutineHistoryScreen extends StatefulWidget {
   const RoutineHistoryScreen({
@@ -33,12 +34,7 @@ class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
     final palette = RoutinePalette.of(context);
     return Scaffold(
       backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(
-          'Routine history',
-          style: AppFonts.cormorant(size: 28, weight: FontWeight.w600),
-        ),
-      ),
+      appBar: rfmScaffoldAppBar(title: 'History'),
       body: FutureBuilder<List<RoutineDayRecord>>(
         future: _history,
         builder: (context, snapshot) {

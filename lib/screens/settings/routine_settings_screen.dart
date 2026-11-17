@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../widgets/common/rfm_app_bar.dart';
+
 /// The routines, opened from Settings → Edit routines; works like
 /// Focus profiles.
 ///
@@ -13,7 +15,7 @@ class RoutineSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Routines')),
+      appBar: rfmScaffoldAppBar(title: 'Routines'),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 10),
         children: [

@@ -7,6 +7,7 @@ import '../../services/focus/profile_events.dart';
 import '../../theme/app_fonts.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/common/text_input_dialog.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 
 /// All focus profiles, opened from Settings → Edit profiles.
 ///
@@ -86,7 +87,7 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Focus Profiles')),
+      appBar: rfmScaffoldAppBar(title: 'Focus Profiles'),
       body: Column(
         children: [
           Expanded(child: _buildList()),

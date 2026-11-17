@@ -4,7 +4,7 @@ import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
 /// One step in the routine list: time, a round check button with an icon
-/// picked from the title, name, duration, and "Done" or a ⋮ menu.
+/// picked from the title, name and duration.
 /// Tapping anywhere on the card ticks or unticks the step.
 class RoutineItemCard extends StatelessWidget {
   const RoutineItemCard({
@@ -137,50 +137,6 @@ class RoutineItemCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (completed)
-                  Text(
-                    'Done',
-                    style: TextStyle(
-                      color: palette.accent,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                else
-                  PopupMenuButton<String>(
-                    key: Key('routine-menu-$index'),
-                    tooltip: 'Task options',
-                    padding: EdgeInsets.zero,
-                    color: palette.background,
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      color: palette.muted,
-                      size: 17,
-                    ),
-                    onSelected: (_) => onToggle(),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'complete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline_rounded,
-                              color: palette.accent,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Mark as complete',
-                              style: TextStyle(
-                                color: palette.text,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
               ],
             ),
           ),

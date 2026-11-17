@@ -12,7 +12,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp.router(theme: buildAppTheme(), routerConfig: router),
     );
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 11));
 
     expect(find.text('What do you want to focus on?'), findsOneWidget);
   });

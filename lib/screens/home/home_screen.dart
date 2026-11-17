@@ -258,10 +258,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               cards: buildHomeCarouselCards(
                 context: context,
                 onStartFocus: _scrollToProfiles,
-                onMorningRoutine: () =>
-                    context.push('/routine?period=morning&start=true'),
-                onEveningRoutine: () =>
-                    context.push('/routine?period=evening&start=true'),
+                onMorningRoutine: () => context.push('/routine?period=morning'),
+                onEveningRoutine: () => context.push('/routine?period=evening'),
                 onStartPlan: () => context.push('/programme/intake'),
               ),
               initialIndex: homeCarouselIndexFor(now),

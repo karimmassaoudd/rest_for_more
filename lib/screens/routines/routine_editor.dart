@@ -11,6 +11,7 @@ import '../../theme/app_palette.dart';
 import '../../widgets/routines/activity_sheet.dart';
 import '../../widgets/routines/activity_tile.dart';
 import '../../widgets/routines/sleep_time_card.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 
 /// Name of the bedtime activity; it always follows the chosen bedtime
 /// and is always shown last. Must match default_evening_activities.dart.
@@ -167,14 +168,13 @@ class _EveningPageState extends State<EveningPage> {
       body: SafeArea(
         child: Column(
           children: [
+            const RfmAppBar(title: 'Avond'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(23, 17, 23, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _TopBar(),
-                    const SizedBox(height: 19),
                     SleepTimeCard(
                       sleepTime: _sleepTime,
                       onEdit: _chooseSleepTime,
@@ -227,38 +227,7 @@ class _EveningPageState extends State<EveningPage> {
   }
 }
 
-/// Back arrow and the page title.
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Row(
-      children: [
-        IconButton(
-          icon: Icon(Icons.arrow_back, size: 19, color: palette.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        const SizedBox(width: 25),
-        Text(
-          'Avond',
-          style: TextStyle(
-            color: palette.muted,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const Spacer(),
-        // Placeholder: the menu has no actions yet.
-        Icon(Icons.more_vert, size: 21, color: palette.text),
-      ],
-    );
-  }
-}
-
 /// "+ Activiteit toevoegen" button.
-
 class _OutlinedAction extends StatelessWidget {
   const _OutlinedAction({required this.label, required this.onPressed});
 
