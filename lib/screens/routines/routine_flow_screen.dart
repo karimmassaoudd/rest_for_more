@@ -1,16 +1,24 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../models/routines/routine_time.dart';
-import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
+import '../../theme/app_palette.dart';
 import '../../widgets/common/rfm_app_bar.dart';
+import '../../widgets/focus/timer_dial.dart';
+import '../../widgets/focus/timer_primary_button.dart';
 
-/// Guides a complete morning or evening routine without returning to its
-/// overview between activities.
+/// One routine activity at a time, in the same layout as the focus timer:
+/// title, "Activity 4 of 5", the sunburst dial, and the buttons below.
+///
+/// Opens at [initialIndex] (or the first open step). "Complete activity"
+/// moves on to the next open step. A step that is already done shows
+/// "Done" with a "Mark as not done" button.
+///
+/// The timer only runs while this screen is open for now; running in the
+/// background (with app blocking) comes with RoutineSessionController.
 class RoutineFlowScreen extends StatefulWidget {
   const RoutineFlowScreen({
     super.key,
@@ -46,6 +54,10 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
   bool _isTimerRunning = false;
   bool _isCompleting = false;
 
+  // ------------------------------------------------------------------
+  // State
+  // ------------------------------------------------------------------
+
   @override
   void initState() {
     super.initState();
@@ -60,40 +72,22 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     if (_currentIndex != -1 && !_isCurrentDone) _resetTimer();
   }
 
-  /// True when the step on screen is already ticked off.
-  bool get _isCurrentDone =>
-      _currentIndex != -1 && _completed.contains(_currentIndex);
-
-  /// "Mark as not done" on a step that was already done.
-  Future<void> _reopenCurrentStep() async {
-    final reopen = widget.onStepReopened;
-    if (reopen == null || _isCompleting || !_isCurrentDone) return;
-    final index = _currentIndex;
-    setState(() => _isCompleting = true);
-    try {
-      await reopen(index);
-      if (!mounted) return;
-      setState(() {
-        _completed.remove(index);
-        _isCompleting = false;
-        _resetTimer();
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isCompleting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save routine progress. Please try again.'),
-        ),
-      );
-    }
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
   }
+
+  /// True when every step is done (or there are no steps).
+  bool get _isComplete => _currentIndex == -1;
+
+  /// True when the step on screen is already ticked off.
+  bool get _isCurrentDone =>
+      _currentIndex != -1 && _completed.contains(_currentIndex);
+
+  /// How full the dial is: 1.0 at the start, 0.0 when time is up.
+  double get _progress =>
+      _totalSeconds == 0 ? 0.0 : (_secondsRemaining / _totalSeconds);
 
   int _nextIncompleteIndex(int start) {
     for (var index = start; index < widget.steps.length; index++) {
@@ -101,6 +95,10 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     }
     return -1;
   }
+
+  // ------------------------------------------------------------------
+  // Timer (on screen only for now)
+  // ------------------------------------------------------------------
 
   void _resetTimer() {
     _timer?.cancel();
@@ -128,7 +126,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
   }
 
   void _toggleTimer() {
-    if (_isCompleting || _currentIndex == -1) return;
+    if (_isCompleting || _isComplete || _secondsRemaining == 0) return;
     setState(() => _isTimerRunning = !_isTimerRunning);
     if (_isTimerRunning) {
       _startTimer();
@@ -137,8 +135,12 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     }
   }
 
+  // ------------------------------------------------------------------
+  // Actions
+  // ------------------------------------------------------------------
+
   Future<void> _completeCurrentStep() async {
-    if (_isCompleting || _currentIndex == -1) return;
+    if (_isCompleting || _isComplete) return;
     final completedIndex = _currentIndex;
     setState(() => _isCompleting = true);
     try {
@@ -150,268 +152,207 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         final after = _nextIncompleteIndex(completedIndex + 1);
         _currentIndex = after != -1 ? after : _nextIncompleteIndex(0);
         _isCompleting = false;
-        if (_currentIndex != -1) _resetTimer();
+        if (_currentIndex != -1) {
+          _resetTimer();
+        } else {
+          _timer?.cancel();
+        }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() => _isCompleting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not save routine progress. Please try again.'),
-        ),
-      );
+      _showSaveError();
     }
   }
 
+  /// "Mark as not done" on a step that was already done.
+  Future<void> _reopenCurrentStep() async {
+    final reopen = widget.onStepReopened;
+    if (reopen == null || _isCompleting || !_isCurrentDone) return;
+    final index = _currentIndex;
+    setState(() => _isCompleting = true);
+    try {
+      await reopen(index);
+      if (!mounted) return;
+      setState(() {
+        _completed.remove(index);
+        _isCompleting = false;
+        _resetTimer();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isCompleting = false);
+      _showSaveError();
+    }
+  }
+
+  void _showSaveError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not save routine progress. Please try again.'),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
-    final palette = RoutinePalette.of(context);
-    final isComplete = _currentIndex == -1;
-    final isEmpty = widget.steps.isEmpty;
-    final step = isComplete ? null : widget.steps[_currentIndex];
-    final nextIndex = isComplete ? -1 : _nextIncompleteIndex(_currentIndex + 1);
-    final nextStep = nextIndex == -1 ? null : widget.steps[nextIndex];
+    final palette = context.palette;
     final routineName = widget.period == RoutinePeriod.morning
         ? 'Morning'
         : 'Evening';
 
     return Scaffold(
       backgroundColor: palette.background,
-      appBar: rfmScaffoldAppBar(title: routineName),
       body: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
-          child: Column(
-            children: [
-              _StatusIcon(isComplete: isComplete, palette: palette),
-              const SizedBox(height: 22),
-              Text(
-                isComplete
-                    ? '$routineName routine complete'
-                    : '$routineName routine',
-                key: const Key('routine-flow-heading'),
-                style: AppFonts.montserrat(
-                  size: 11,
-                  weight: FontWeight.w800,
-                  color: palette.accent,
-                ).copyWith(letterSpacing: 1.4),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                isComplete
-                    ? (isEmpty ? 'No activities yet' : 'Beautifully done.')
-                    : step!.title,
-                key: const Key('routine-flow-step-title'),
-                textAlign: TextAlign.center,
-                style: AppFonts.cormorant(
-                  size: 34,
-                  weight: FontWeight.w600,
-                  color: palette.text,
-                ).copyWith(height: 1.05),
-              ),
-              const SizedBox(height: 10),
-              if (isComplete)
-                Text(
-                  isEmpty
-                      ? 'This routine has no activities yet.'
-                      : 'Every activity is saved.',
-                  textAlign: TextAlign.center,
-                  style: AppFonts.manrope(size: 13, color: palette.muted),
-                )
-              else ...[
-                Text(
-                  'Activity ${_currentIndex + 1} of ${widget.steps.length}',
-                  key: const Key('routine-flow-progress'),
-                  style: AppFonts.montserrat(
-                    size: 11,
-                    weight: FontWeight.w600,
-                    color: palette.muted,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  nextStep == null
-                      ? 'This is your final activity.'
-                      : 'Next: ${nextStep.title}',
-                  key: const Key('routine-flow-next-step'),
-                  textAlign: TextAlign.center,
-                  style: AppFonts.manrope(
-                    size: 13,
-                    weight: FontWeight.w600,
-                    color: palette.muted,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                Expanded(
-                  child: Center(
-                    child: _isCurrentDone
-                        ? Row(
-                            key: const Key('routine-flow-done'),
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.check_circle_rounded,
-                                color: palette.accent,
-                                size: 28,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Done',
-                                style: AppFonts.cormorant(
-                                  size: 30,
-                                  weight: FontWeight.w600,
-                                  color: palette.text,
-                                ),
-                              ),
-                            ],
-                          )
-                        : _TimerDisplay(
-                            seconds: _secondsRemaining,
-                            total: _totalSeconds,
-                            palette: palette,
-                          ),
-                  ),
-                ),
-                if (!_isCurrentDone)
-                  OutlinedButton.icon(
-                    key: const Key('routine-flow-pause-button'),
-                    onPressed: _toggleTimer,
-                    icon: Icon(
-                      _isTimerRunning
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                    ),
-                    label: Text(
-                      _isTimerRunning ? 'Pause timer' : 'Resume timer',
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: palette.text,
-                      side: BorderSide(color: palette.border),
-                    ),
-                  ),
-              ],
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: FilledButton.icon(
-                  key: Key(
-                    isComplete
-                        ? 'return-to-overview-button'
-                        : _isCurrentDone
-                        ? 'reopen-routine-step-button'
-                        : 'complete-routine-step-button',
-                  ),
-                  onPressed: _isCompleting
-                      ? null
-                      : isComplete
-                      ? () => Navigator.maybePop(context)
-                      : _isCurrentDone
-                      ? _reopenCurrentStep
-                      : _completeCurrentStep,
-                  icon: _isCompleting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(
-                          isComplete
-                              ? Icons.arrow_back_rounded
-                              : _isCurrentDone
-                              ? Icons.undo_rounded
-                              : Icons.check_rounded,
-                        ),
-                  label: Text(
-                    isComplete
-                        ? 'Return to overview'
-                        : _isCompleting
-                        ? 'Saving...'
-                        : _isCurrentDone
-                        ? 'Mark as not done'
-                        : 'Complete activity',
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: palette.button,
-                    foregroundColor: palette.buttonText,
-                    textStyle: AppFonts.manrope(
-                      size: 14,
-                      weight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RfmAppBar(title: routineName),
+            const SizedBox(height: 28),
+            _buildIntro(palette),
+            Expanded(child: Center(child: _buildCenter(palette))),
+            _buildButtons(palette),
+          ],
         ),
       ),
     );
   }
-}
 
-class _StatusIcon extends StatelessWidget {
-  const _StatusIcon({required this.isComplete, required this.palette});
-  final bool isComplete;
-  final RoutinePalette palette;
+  /// Step title + "Activity 4 of 5", in the focus timer's intro fonts.
+  Widget _buildIntro(AppPalette palette) {
+    final isEmpty = widget.steps.isEmpty;
+    final String title;
+    final String subtitle;
+    if (_isComplete) {
+      title = isEmpty ? 'No activities yet' : 'Beautifully done.';
+      subtitle = isEmpty
+          ? 'This routine has no activities yet.'
+          : 'Every activity is saved.';
+    } else {
+      title = widget.steps[_currentIndex].title;
+      subtitle = 'Activity ${_currentIndex + 1} of ${widget.steps.length}';
+    }
 
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 68,
-    height: 68,
-    decoration: BoxDecoration(
-      color: palette.accentSoft,
-      shape: BoxShape.circle,
-    ),
-    child: Icon(
-      isComplete
-          ? Icons.check_circle_rounded
-          : Icons.play_circle_outline_rounded,
-      color: palette.accent,
-      size: 32,
-    ),
-  );
-}
-
-class _TimerDisplay extends StatelessWidget {
-  const _TimerDisplay({
-    required this.seconds,
-    required this.total,
-    required this.palette,
-  });
-  final int seconds;
-  final int total;
-  final RoutinePalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
-    final remainingSeconds = (seconds % 60).toString().padLeft(2, '0');
-    final progress = total == 0 ? 0.0 : 1 - seconds / total;
-    return SizedBox(
-      width: math.min(MediaQuery.sizeOf(context).width - 48, 230),
-      height: math.min(MediaQuery.sizeOf(context).width - 48, 230),
-      child: Stack(
-        alignment: Alignment.center,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox.expand(
-            child: CircularProgressIndicator(
-              value: progress,
-              strokeWidth: 7,
-              color: palette.accent,
-              backgroundColor: palette.border.withValues(alpha: 0.35),
+          Text(
+            title,
+            key: const Key('routine-flow-step-title'),
+            style: AppFonts.cormorant(
+              size: 26,
+              weight: FontWeight.w600,
+              color: palette.text,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
-            '$minutes:$remainingSeconds',
-            key: const Key('routine-flow-timer'),
+            subtitle,
+            key: const Key('routine-flow-progress'),
+            style: AppFonts.cormorant(size: 15, color: palette.muted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The dial while a step runs; a check when it's done.
+  Widget _buildCenter(AppPalette palette) {
+    if (_isComplete || _isCurrentDone) {
+      return Column(
+        key: const Key('routine-flow-done'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_rounded, color: palette.highlight, size: 72),
+          const SizedBox(height: 12),
+          Text(
+            _isComplete ? 'All done' : 'Done',
             style: AppFonts.cormorant(
-              size: 52,
+              size: 30,
               weight: FontWeight.w600,
               color: palette.text,
             ),
           ),
         ],
+      );
+    }
+    return TimerDial(progress: _progress, millisLeft: _secondsRemaining * 1000);
+  }
+
+  /// Like the focus timer: one big button, and a text button under it.
+  Widget _buildButtons(AppPalette palette) {
+    final Widget primary;
+    Widget? secondary;
+
+    if (_isComplete) {
+      primary = TimerPrimaryButton(
+        key: const Key('return-to-overview-button'),
+        label: 'Return to overview',
+        onPressed: () => Navigator.maybePop(context),
+      );
+    } else if (_isCurrentDone) {
+      primary = TimerPrimaryButton(
+        key: const Key('reopen-routine-step-button'),
+        label: _isCompleting ? 'Saving...' : 'Mark as not done',
+        onPressed: _isCompleting ? null : _reopenCurrentStep,
+      );
+    } else {
+      primary = TimerPrimaryButton(
+        key: const Key('complete-routine-step-button'),
+        label: _isCompleting ? 'Saving...' : 'Complete activity',
+        onPressed: _isCompleting ? null : _completeCurrentStep,
+      );
+      // No pause once the time is up.
+      if (_secondsRemaining > 0) {
+        secondary = _textButton(
+          key: const Key('routine-flow-pause-button'),
+          label: _isTimerRunning ? 'Pause' : 'Resume',
+          onPressed: _toggleTimer,
+          palette: palette,
+        );
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          primary,
+          const SizedBox(height: 8),
+          // Same height with or without the second button, so nothing jumps.
+          SizedBox(height: 48, child: secondary),
+        ],
+      ),
+    );
+  }
+
+  Widget _textButton({
+    required Key key,
+    required String label,
+    required VoidCallback onPressed,
+    required AppPalette palette,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: TextButton(
+        key: key,
+        onPressed: onPressed,
+        child: Text(
+          label,
+          style: AppFonts.manrope(
+            size: 16,
+            weight: FontWeight.w600,
+            color: palette.accent,
+          ),
+        ),
       ),
     );
   }

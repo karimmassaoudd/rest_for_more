@@ -36,14 +36,14 @@ void main() {
     );
 
     expect(find.text('First activity'), findsOneWidget);
-    expect(find.text('Next: Second activity'), findsOneWidget);
+    expect(find.text('Activity 1 of 2'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('complete-routine-step-button')));
     await tester.pump();
 
     expect(savedIndexes, [0]);
     expect(find.text('Second activity'), findsOneWidget);
-    expect(find.text('This is your final activity.'), findsOneWidget);
+    expect(find.text('Activity 2 of 2'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('complete-routine-step-button')));
     await tester.pump();
@@ -65,7 +65,9 @@ void main() {
   });
 
   testWidgets('handles empty and already-completed routines', (tester) async {
-    await tester.pumpWidget(buildSubject(steps: const [], onStepCompleted: (_) async {}));
+    await tester.pumpWidget(
+      buildSubject(steps: const [], onStepCompleted: (_) async {}),
+    );
     expect(find.text('No activities yet'), findsOneWidget);
 
     await tester.pumpWidget(
@@ -89,6 +91,9 @@ void main() {
     await tester.pump();
 
     expect(find.text('First activity'), findsOneWidget);
-    expect(find.text('Could not save routine progress. Please try again.'), findsOneWidget);
+    expect(
+      find.text('Could not save routine progress. Please try again.'),
+      findsOneWidget,
+    );
   });
 }
