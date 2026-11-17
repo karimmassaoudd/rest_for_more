@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/home/home_card.dart';
+import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_palette.dart';
 
@@ -15,8 +16,11 @@ List<HomeCard> buildHomeCarouselCards({
   required VoidCallback onMorningRoutine,
   required VoidCallback onEveningRoutine,
   required VoidCallback onStartPlan,
+  RoutinePeriod? runningRoutine,
 }) {
   final palette = context.palette;
+  final morningRunning = runningRoutine == RoutinePeriod.morning;
+  final eveningRunning = runningRoutine == RoutinePeriod.evening;
 
   return [
     HomeCard(
@@ -37,7 +41,9 @@ List<HomeCard> buildHomeCarouselCards({
       iconColor: palette.highlight,
       eyebrow: 'Ready to start the day?',
       title: 'Good morning, start the day by being productive.',
-      buttonLabel: 'View Morning Routine',
+      buttonLabel: morningRunning
+          ? 'Continue Morning Routine'
+          : 'View Morning Routine',
       background: palette.card,
       textColor: palette.text,
       buttonColor: palette.highlight,
@@ -51,7 +57,9 @@ List<HomeCard> buildHomeCarouselCards({
       iconColor: palette.highlight,
       eyebrow: 'Ready to end the day?',
       title: 'Good evening, end the day on a good note.',
-      buttonLabel: 'View Evening Routine',
+      buttonLabel: eveningRunning
+          ? 'Continue Evening Routine'
+          : 'View Evening Routine',
       background: palette.card,
       textColor: palette.text,
       buttonColor: palette.accent,
@@ -75,9 +83,13 @@ List<HomeCard> buildHomeCarouselCards({
   ];
 }
 
-/// Which carousel card to show first at [time]:
-/// morning card 07:00–08:59, evening card 20:00–20:59, otherwise "start a rest".
-int homeCarouselIndexFor(DateTime time) {
+/// Which carousel card to show first:
+/// - a running routine's card, at any time of day;
+/// - otherwise the morning card 07:00–08:59, the evening card 20:00–20:59,
+///   and "start a rest" the rest of the day.
+int homeCarouselIndexFor(DateTime time, {RoutinePeriod? runningRoutine}) {
+  if (runningRoutine == RoutinePeriod.morning) return 1;
+  if (runningRoutine == RoutinePeriod.evening) return 2;
   final hour = time.hour;
   if (hour >= 7 && hour < 9) return 1;
   if (hour >= 20 && hour < 21) return 2;
