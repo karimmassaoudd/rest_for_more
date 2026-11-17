@@ -55,6 +55,9 @@ class RoutineSessionController extends ChangeNotifier {
   int _stepEndAt = 0;
   int? _pausedLeft;
 
+  /// Steps not ticked yet, reported by the routine screen (null = unknown).
+  int? _stepsLeft;
+
   // ---------- in memory only ----------
   bool _triedBlocking = false;
   bool _timeUpHandled = false;
@@ -84,6 +87,10 @@ class RoutineSessionController extends ChangeNotifier {
   String? get activeStep => isActive ? _activeStep : null;
 
   bool get isPaused => _pausedLeft != null;
+
+  /// Every step is ticked, but the apps are still blocked until the end.
+  bool get isDone => isActive && _stepsLeft == 0;
+
   int get stepTotalMillis => _stepTotal;
 
   int get stepRemainingMillis {
@@ -232,6 +239,14 @@ class RoutineSessionController extends ChangeNotifier {
       unawaited(_updateAlerts());
       notifyListeners();
     }
+  }
+
+  /// The routine screen reports how many steps are left after every change.
+  void reportStepsLeft(RoutinePeriod period, int left) {
+    if (!isRunningFor(period) || _stepsLeft == left) return;
+    _stepsLeft = left;
+    unawaited(_save());
+    notifyListeners();
   }
 
   @visibleForTesting
@@ -399,6 +414,7 @@ class RoutineSessionController extends ChangeNotifier {
     _stepTotal = 0;
     _stepEndAt = 0;
     _pausedLeft = null;
+    _stepsLeft = null;
     _triedBlocking = false;
     _timeUpHandled = false;
   }
@@ -432,6 +448,7 @@ class RoutineSessionController extends ChangeNotifier {
           'stepTotal': _stepTotal,
           'stepEndAt': _stepEndAt,
           'pausedLeft': _pausedLeft,
+          'stepsLeft': _stepsLeft,
         }),
       );
     } catch (error) {
@@ -460,6 +477,7 @@ class RoutineSessionController extends ChangeNotifier {
       _stepTotal = json['stepTotal'] as int? ?? 0;
       _stepEndAt = json['stepEndAt'] as int? ?? 0;
       _pausedLeft = json['pausedLeft'] as int?;
+      _stepsLeft = json['stepsLeft'] as int?;
       _triedBlocking = true; // don't ask for permission again mid-routine
     } catch (error) {
       debugPrint('Loading the routine failed: $error');

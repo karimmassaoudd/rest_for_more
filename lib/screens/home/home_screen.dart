@@ -199,10 +199,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// "View …" opens the routine; "Continue …" (while it runs) goes
-  /// straight to the running step, like the notification.
-  void _openRoutine(RoutinePeriod period, RoutinePeriod? running) {
-    final continueIt = running == period;
+  /// "View …" / "… Done" open the routine; "Continue …" goes straight to the running step, like the notification.
+  void _openRoutine(RoutinePeriod period, RoutinePeriod? running, bool done) {
+    final continueIt = running == period && !done;
     context.push(
       '/routine?period=${period.name}${continueIt ? '&open=active' : ''}',
     );
@@ -268,16 +267,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               listenable: RoutineSessionController.instance,
               builder: (context, _) {
                 final running = RoutineSessionController.instance.period;
+                final done = RoutineSessionController.instance.isDone;
                 return HomeCarousel(
                   cards: buildHomeCarouselCards(
                     context: context,
                     onStartFocus: _scrollToProfiles,
                     onMorningRoutine: () =>
-                        _openRoutine(RoutinePeriod.morning, running),
+                        _openRoutine(RoutinePeriod.morning, running, done),
                     onEveningRoutine: () =>
-                        _openRoutine(RoutinePeriod.evening, running),
+                        _openRoutine(RoutinePeriod.evening, running, done),
                     onStartPlan: () => context.push('/programme/intake'),
                     runningRoutine: running,
+                    routineDone: done,
                   ),
                   initialIndex: homeCarouselIndexFor(
                     now,

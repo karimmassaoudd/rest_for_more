@@ -81,17 +81,30 @@ class _RoutineScreenState extends State<RoutineScreen> {
     });
   }
 
+  /// Loads today's ticks. When a new routine day has started (from 04:00)
+  /// the ticks start empty; the previous day is already in the history.
+  /// Never while a routine is running, so nothing clears mid-routine.
   Future<void> _loadProgress() async {
     try {
+      final storage = widget.progressStorage;
+      final today = storage.progressDay(DateTime.now());
+      if (await storage.savedDay() != today &&
+          !RoutineSessionController.instance.isActive) {
+        await storage.clearTicks();
+      }
       final results = await Future.wait([
-        widget.progressStorage.loadCompletedTasks(RoutinePeriod.morning),
-        widget.progressStorage.loadCompletedTasks(RoutinePeriod.evening),
+        storage.loadCompletedTasks(RoutinePeriod.morning),
+        storage.loadCompletedTasks(RoutinePeriod.evening),
       ]);
       if (!mounted) return;
       setState(() {
         _morningSteps = _applySavedProgress(_morningSteps, results[0]);
         _eveningSteps = _applySavedProgress(_eveningSteps, results[1]);
       });
+      RoutineSessionController.instance.reportStepsLeft(
+        widget.period,
+        _remaining,
+      );
     } catch (_) {
       // Keep the in-memory defaults if local storage is unavailable.
     }
@@ -113,6 +126,11 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   /// Saves this period's ticks and today's history record.
   Future<void> _saveProgress() async {
+    // Home shows "… Routine Done" when nothing is left.
+    RoutineSessionController.instance.reportStepsLeft(
+      widget.period,
+      _remaining,
+    );
     await widget.progressStorage.saveCompletedTasks(widget.period, _steps);
     await widget.progressStorage.saveToday(
       morningSteps: _morningSteps,

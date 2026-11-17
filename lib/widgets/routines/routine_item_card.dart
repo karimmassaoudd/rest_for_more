@@ -63,13 +63,19 @@ class RoutineItemCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Dismissible(
         key: ValueKey('routine-swipe-${step.title}'),
-        direction: DismissDirection.startToEnd,
+        // Swipe either way: right-handed and left-handed both work.
+        direction: DismissDirection.horizontal,
         // The card never leaves the list: a swipe only ticks or unticks it.
         confirmDismiss: (_) async {
           onToggle();
           return false;
         },
         background: _SwipeBackground(completed: completed, palette: palette),
+        secondaryBackground: _SwipeBackground(
+          completed: completed,
+          palette: palette,
+          alignEnd: true,
+        ),
         child: Semantics(
           button: true,
           checked: completed,
@@ -243,15 +249,22 @@ class _StepIcon extends StatelessWidget {
 
 /// What shows behind the card while it's swiped: "Done" or "Undo".
 class _SwipeBackground extends StatelessWidget {
-  const _SwipeBackground({required this.completed, required this.palette});
+  const _SwipeBackground({
+    required this.completed,
+    required this.palette,
+    this.alignEnd = false,
+  });
 
   final bool completed;
   final RoutinePalette palette;
 
+  /// True for a swipe to the left: the label sits on the right.
+  final bool alignEnd;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      alignment: Alignment.centerLeft,
+      alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
       padding: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
         color: palette.accentSoft,

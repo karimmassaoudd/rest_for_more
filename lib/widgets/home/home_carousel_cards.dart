@@ -17,6 +17,7 @@ List<HomeCard> buildHomeCarouselCards({
   required VoidCallback onEveningRoutine,
   required VoidCallback onStartPlan,
   RoutinePeriod? runningRoutine,
+  bool routineDone = false,
 }) {
   final palette = context.palette;
   final morningRunning = runningRoutine == RoutinePeriod.morning;
@@ -41,9 +42,9 @@ List<HomeCard> buildHomeCarouselCards({
       iconColor: palette.highlight,
       eyebrow: 'Ready to start the day?',
       title: 'Good morning, start the day by being productive.',
-      buttonLabel: morningRunning
-          ? 'Continue Morning Routine'
-          : 'View Morning Routine',
+      buttonLabel: !morningRunning
+          ? 'View Morning Routine'
+          : (routineDone ? 'Morning Routine Done' : 'Continue Morning Routine'),
       background: palette.card,
       textColor: palette.text,
       buttonColor: palette.highlight,
@@ -57,9 +58,9 @@ List<HomeCard> buildHomeCarouselCards({
       iconColor: palette.highlight,
       eyebrow: 'Ready to end the day?',
       title: 'Good evening, end the day on a good note.',
-      buttonLabel: eveningRunning
-          ? 'Continue Evening Routine'
-          : 'View Evening Routine',
+      buttonLabel: !eveningRunning
+          ? 'View Evening Routine'
+          : (routineDone ? 'Evening Routine Done' : 'Continue Evening Routine'),
       background: palette.card,
       textColor: palette.text,
       buttonColor: palette.accent,
