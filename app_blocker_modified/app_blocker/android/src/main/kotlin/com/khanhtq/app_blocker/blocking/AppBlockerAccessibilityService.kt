@@ -12,6 +12,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import com.khanhtq.app_blocker.persistence.SessionTimes
 import com.khanhtq.app_blocker.event.BlockEventStreamHandler
 import com.khanhtq.app_blocker.persistence.BlockerPreferences
 
@@ -242,8 +243,8 @@ class AppBlockerAccessibilityService : AccessibilityService() {
      * Flutter's SharedPreferences live in "FlutterSharedPreferences" with a "flutter." key prefix.
      */
     private fun isSessionExpired(): Boolean {
-        val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-        val endTime = flutterPrefs.getLong("flutter.sessionEndTimeMillis", 0L)
+        // Focus session or routine, whichever is blocking.
+        val endTime = SessionTimes.endMillis(this)
         return endTime > 0L && System.currentTimeMillis() >= endTime
     }
 

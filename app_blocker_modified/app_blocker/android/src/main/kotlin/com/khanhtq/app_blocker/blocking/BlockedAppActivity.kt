@@ -27,6 +27,7 @@ import android.graphics.Paint
 import androidx.core.content.ContextCompat
 import com.khanhtq.app_blocker.persistence.BlockerPreferences
 import org.json.JSONObject
+import com.khanhtq.app_blocker.persistence.SessionTimes
 import com.khanhtq.app_blocker.event.BlockEventStreamHandler
 
 /**
@@ -87,8 +88,11 @@ class BlockedAppActivity : Activity() {
         )
 
         screenConfig = config
+        // "Focus" for a focus session, "Morning routine" for a routine.
         profileName = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            .getString("flutter.sessionProfileName", null) ?: ""
+            .getString("flutter.sessionProfileName", null)
+            ?: SessionTimes.routineName(this)
+            ?: ""
         showBlocked()
         screenConfig = config
     }
@@ -180,8 +184,8 @@ class BlockedAppActivity : Activity() {
 
     /** Remaining time = session end time - now. Null if no session end is saved. */
     private fun getRemainingSessionMillis(): Long? {
-        val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-        val endTime = flutterPrefs.getLong("flutter.sessionEndTimeMillis", 0L)
+        // Focus session or routine, whichever is blocking.
+        val endTime = SessionTimes.endMillis(this)
         if (endTime == 0L) return null
         return (endTime - System.currentTimeMillis()).coerceAtLeast(0L)
     }
@@ -428,6 +432,8 @@ class BlockedAppActivity : Activity() {
             .remove("flutter.sessionPausesUsed")
             .remove("flutter.sessionPausesAllowed")
             .apply()
+
+            SessionTimes.clearRoutine(this)
 
         blockedPackage?.let {
             BlockEventStreamHandler.sendEvent(

@@ -38,6 +38,11 @@ class RoutineSessionController extends ChangeNotifier {
   static const graceMinutes = 30;
   static const _storeKey = 'routineSession';
 
+  // Read by the app_blocker plugin (SessionTimes.kt): block-screen
+  // countdown, unblocking when the app is closed, Emergency Unlock.
+  static const _pluginEndKey = 'routineBlockedUntilMillis';
+  static const _pluginNameKey = 'routineBlockName';
+
   final _blocking = BlockingService();
   final _alerts = TimerNotificationService.instance;
 
@@ -95,7 +100,15 @@ class RoutineSessionController extends ChangeNotifier {
   /// time is over. Runs again by itself whenever the app comes back.
   Future<void> restore() async {
     _lifecycle ??= AppLifecycleListener(onResume: () => unawaited(restore()));
+    final hadRoutine = _period != null;
     await _load();
+    if (hadRoutine && _period == null) {
+      // Emergency Unlock on the block screen ended it.
+      _endTimer?.cancel();
+      await _alerts.cancelRoutine();
+      notifyListeners();
+      return;
+    }
     if (_period != null && _blockedUntil <= _now) {
       await _finish();
       return;
@@ -145,7 +158,15 @@ class RoutineSessionController extends ChangeNotifier {
 
     if (!_isBlocking && !_triedBlocking) {
       _triedBlocking = true;
-      if (context.mounted) _isBlocking = await _startBlocking(context, period);
+      if (context.mounted) {
+        // The plugin reads the end time when it blocks, so save it first.
+        _isBlocking = true;
+        await _save();
+        _isBlocking = false;
+        if (context.mounted) {
+          _isBlocking = await _startBlocking(context, period);
+        }
+      }
     } else if (_isBlocking) {
       await _updateBlockScreen(); // the "until" time may have moved
     }
@@ -243,7 +264,7 @@ class RoutineSessionController extends ChangeNotifier {
       await _blocking.startBlocking(
         profile,
         subtitle: _blockScreenText(period),
-        timerLabel: '',
+        timerLabel: '{timeLeft} remaining',
       );
       return true;
     } catch (error) {
@@ -258,7 +279,7 @@ class RoutineSessionController extends ChangeNotifier {
     try {
       await _blocking.updateBlockScreen(
         subtitle: _blockScreenText(period),
-        timerLabel: '',
+        timerLabel: '{timeLeft} remaining',
       );
     } catch (error) {
       debugPrint('Updating the block screen failed: $error');
@@ -354,7 +375,6 @@ class RoutineSessionController extends ChangeNotifier {
     }
   }
 
-  /// "08:15".
   /// "7:13 PM" or "19:13", following the phone's 12/24-hour setting.
   String _clock(int millis) {
     final time = DateTime.fromMillisecondsSinceEpoch(millis);
@@ -366,11 +386,10 @@ class RoutineSessionController extends ChangeNotifier {
     return '$h:$m ${time.hour < 12 ? 'AM' : 'PM'}';
   }
 
-  /// Block screen subtitle; the plugin's own timer line stays empty
-  /// because it only knows focus sessions.
+  /// Block screen subtitle. The plugin shows "{timeLeft} remaining" itself,
+  /// from the routineBlockedUntilMillis we save.
   String _blockScreenText(RoutinePeriod period) =>
-      '${routineName(period)} routine · apps blocked until '
-      '${_clock(_blockedUntil)}';
+      '${routineName(period)} routine in progress';
 
   void _clearState() {
     _period = null;
@@ -389,7 +408,19 @@ class RoutineSessionController extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       if (_period == null) {
         await prefs.remove(_storeKey);
+        await prefs.remove(_pluginEndKey);
+        await prefs.remove(_pluginNameKey);
         return;
+      }
+      if (_isBlocking) {
+        await prefs.setInt(_pluginEndKey, _blockedUntil);
+        await prefs.setString(
+          _pluginNameKey,
+          '${routineName(_period!)} routine',
+        );
+      } else {
+        await prefs.remove(_pluginEndKey);
+        await prefs.remove(_pluginNameKey);
       }
       await prefs.setString(
         _storeKey,
@@ -413,7 +444,11 @@ class RoutineSessionController extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.reload();
       final raw = prefs.getString(_storeKey);
-      if (raw == null) return;
+      if (raw == null) {
+        // Never started, or ended by the plugin (Emergency Unlock).
+        _clearState();
+        return;
+      }
       final json = jsonDecode(raw) as Map<String, dynamic>;
       _period = null;
       for (final p in RoutinePeriod.values) {
