@@ -249,9 +249,6 @@ class _TopBar extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        const Spacer(),
-        // Placeholder: the menu has no actions yet.
-        Icon(Icons.more_vert, size: 21, color: palette.text),
       ],
     );
   }
