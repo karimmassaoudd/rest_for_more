@@ -104,7 +104,7 @@ class BlockingService {
   }) async {
     await _configureBlockScreen(
       subtitle: subtitle ?? '${profile.name} session in progress',
-      timerLabel: timerLabel ?? '{timeLeft} remaining',
+      timerLabel: timerLabel ?? 'Apps unlock in {timeLeft}',
     );
 
     final stored = await _alwaysAvailableStore.getAlwaysAvailableApps(

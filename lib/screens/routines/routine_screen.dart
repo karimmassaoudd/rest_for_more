@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../models/routines/default_routine_steps.dart';
 import '../../models/routines/routine_step.dart';
@@ -16,6 +17,7 @@ import '../../widgets/routines/steps_heading.dart';
 import 'routine_flow_screen.dart';
 import '../../services/routines/routine_session_controller.dart';
 import '../../widgets/routines/blocked_until_note.dart';
+import 'routine_history_debug_screen.dart';
 
 /// The morning or evening routine (view only): progress, the list of
 /// steps, and a button that opens the guided flow through the open steps.
@@ -330,12 +332,16 @@ class _RoutineScreenState extends State<RoutineScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _isMorning ? 'Your morning' : 'Your evening',
-            style: AppFonts.cormorant(
-              size: 26,
-              weight: FontWeight.w600,
-              color: palette.text,
+          // Debug builds only: long-press opens the saved history as text.
+          GestureDetector(
+            onLongPress: kDebugMode ? _openDebugHistory : null,
+            child: Text(
+              _isMorning ? 'Your morning' : 'Your evening',
+              style: AppFonts.cormorant(
+                size: 26,
+                weight: FontWeight.w600,
+                color: palette.text,
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -347,6 +353,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _openDebugHistory() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const RoutineHistoryDebugScreen()),
     );
   }
 }

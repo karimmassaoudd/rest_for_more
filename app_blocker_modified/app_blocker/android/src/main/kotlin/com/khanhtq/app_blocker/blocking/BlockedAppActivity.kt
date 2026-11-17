@@ -70,6 +70,9 @@ class BlockedAppActivity : Activity() {
     private var screenConfig: BlockScreenConfig? = null
     private var profileName: String = ""
 
+    /** True when a morning/evening routine is blocking (not a focus session). */
+    private var isRoutine = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -88,11 +91,13 @@ class BlockedAppActivity : Activity() {
         )
 
         screenConfig = config
+
         // "Focus" for a focus session, "Morning routine" for a routine.
-        profileName = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        val focusName = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             .getString("flutter.sessionProfileName", null)
-            ?: SessionTimes.routineName(this)
-            ?: ""
+        val routineName = SessionTimes.routineName(this)
+        isRoutine = focusName == null && routineName != null
+        profileName = focusName ?: routineName ?: ""
         showBlocked()
         screenConfig = config
     }
@@ -190,11 +195,17 @@ class BlockedAppActivity : Activity() {
         return (endTime - System.currentTimeMillis()).coerceAtLeast(0L)
     }
 
+    /** "24:13", or "1:12:13" from one hour. */
     private fun formatRemaining(millis: Long): String {
         val totalSeconds = millis / 1000
-        val minutes = totalSeconds / 60
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
-        return String.format("%02d:%02d", minutes, seconds)
+        return if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format("%02d:%02d", minutes, seconds)
+        }
     }
 
     /** Session time is up: stop blocking and open the app the user wanted. */
@@ -384,18 +395,24 @@ class BlockedAppActivity : Activity() {
         startTimerUpdates(config)
     }
 
+    /** "Focus session", "Morning routine", or just "session". */
+    private fun sessionLabel(): String = when {
+        profileName.isEmpty() -> "session"
+        isRoutine -> profileName
+        else -> "$profileName session"
+    }
+
     private fun showConfirm() {
         val config = screenConfig ?: return
-        val label = if (profileName.isNotEmpty()) "$profileName session" else "session"
         setContentView(
             buildMessageScreen(
                 config,
                 R.drawable.surprized_sheep,
-                "End your session early?",
-                "This will end your $label early. Blocked apps will be available again immediately.",
+                "Unlock your apps now?",
+                "This ends your ${sessionLabel()} early. Your blocked apps open again right away.",
                 listOf(
-                    buildButton("Never mind, stay focused", true) { showBlocked() },
-                    buildButton("End session", false) { endSessionEarly() },
+                    buildButton("Stay focused", true) { showBlocked() },
+                    buildButton("Unlock now", false) { endSessionEarly() },
                 ),
             )
         )
@@ -403,14 +420,13 @@ class BlockedAppActivity : Activity() {
 
     private fun showEnded() {
         val config = screenConfig ?: return
-        val title = if (profileName.isNotEmpty()) "$profileName session ended early" else "Session ended early"
         setContentView(
             buildMessageScreen(
                 config,
                 R.drawable.dazed_sheep,
-                title,
-                "You can start a new session anytime.",
-                listOf(buildButton("Back to profiles", true) { openRestForMore() }),
+                "Apps unlocked",
+                "Your ${sessionLabel()} ended early. You can start again anytime.",
+                listOf(buildButton("Open Rest For More", true) { openRestForMore() }),
             )
         )
     }

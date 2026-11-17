@@ -279,7 +279,7 @@ class RoutineSessionController extends ChangeNotifier {
       await _blocking.startBlocking(
         profile,
         subtitle: _blockScreenText(period),
-        timerLabel: '{timeLeft} remaining',
+        timerLabel: 'Apps unlock in {timeLeft}',
       );
       return true;
     } catch (error) {
@@ -294,7 +294,7 @@ class RoutineSessionController extends ChangeNotifier {
     try {
       await _blocking.updateBlockScreen(
         subtitle: _blockScreenText(period),
-        timerLabel: '{timeLeft} remaining',
+        timerLabel: 'Apps unlock in {timeLeft}',
       );
     } catch (error) {
       debugPrint('Updating the block screen failed: $error');
