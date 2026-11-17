@@ -23,6 +23,8 @@ class TimerNotificationService {
   static const _alarmId = 1;
   static const _breakAlarmId = 2;
   static const _countdownNotificationId = 100;
+  static const _routineStepAlarmId = 3;
+  static const _routineEndAlarmId = 4;
 
   final _notifications = FlutterLocalNotificationsPlugin();
 
@@ -125,6 +127,99 @@ class TimerNotificationService {
     await _stopAlarm();
     await _stopBreakAlarm();
     await _removeCountdown();
+  }
+
+  // ---------- routines ----------
+
+  /// [showTimer] false: just the text, no countdown (Android). It still
+  /// disappears at [until].
+  Future<void> showRoutine({
+    required DateTime until,
+    required String title,
+    required String subtitle,
+    bool showTimer = true,
+  }) => _showCountdown(
+    until: until,
+    title: title,
+    subtitle: subtitle,
+    link: FocusNotificationNavigation.routineLink,
+    showTimer: showTimer,
+  );
+
+  /// Quiet single sound when a routine step's time is up.
+  Future<void> scheduleRoutineStepEnd(DateTime at, String stepTitle) =>
+      _setQuietAlarm(
+        id: _routineStepAlarmId,
+        at: at,
+        title: "Time's up",
+        body: '$stepTitle: tap Complete when you\'re ready.',
+        volume: 0.6,
+      );
+
+  /// When the routine's blocking ends. Opening the app unblocks the apps
+  /// if it was closed.
+  Future<void> scheduleRoutineUnblock(DateTime at, String routineTitle) =>
+      _setQuietAlarm(
+        id: _routineEndAlarmId,
+        at: at,
+        title: '$routineTitle finished',
+        body: 'Open Rest For More to unblock your apps.',
+        volume: 0.3,
+      );
+
+  Future<void> cancelRoutineStepEnd() => _stopAlarmById(_routineStepAlarmId);
+
+  /// Stops the routine's sounds and removes its countdown.
+  Future<void> cancelRoutine() async {
+    await _stopAlarmById(_routineStepAlarmId);
+    await _stopAlarmById(_routineEndAlarmId);
+    await _removeCountdown();
+  }
+
+  Future<void> _setQuietAlarm({
+    required int id,
+    required DateTime at,
+    required String title,
+    required String body,
+    required double volume,
+  }) async {
+    if (!at.isAfter(DateTime.now())) return;
+    try {
+      await Alarm.stop(id);
+      await Alarm.set(
+        alarmSettings: AlarmSettings(
+          id: id,
+          dateTime: at,
+          loopAudio: false,
+          vibrate: true,
+          androidAlarmClock: true,
+          androidFullScreenIntent: false,
+          androidStopAlarmOnTermination: false,
+          warningNotificationOnKill: false,
+          notificationSettings: NotificationSettings(
+            title: title,
+            body: body,
+            stopButton: 'OK',
+            keepNotificationAfterAlarmEnds: false,
+          ),
+          volumeSettings: VolumeSettings.fade(
+            volume: volume,
+            fadeDuration: Duration.zero,
+            volumeEnforced: false,
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint('Unable to schedule routine alarm: $error');
+    }
+  }
+
+  Future<void> _stopAlarmById(int id) async {
+    try {
+      await Alarm.stop(id);
+    } catch (error) {
+      debugPrint('Unable to stop routine alarm: $error');
+    }
   }
 
   /// True while the end-of-session alarm is ringing.
@@ -231,12 +326,16 @@ class TimerNotificationService {
     required DateTime until,
     required String title,
     required String subtitle,
+    String link = FocusNotificationNavigation.timerLink,
+    bool showTimer = true,
   }) async {
     if (defaultTargetPlatform == TargetPlatform.android) {
       await _showAndroidCountdown(
         until: until,
         title: title,
         subtitle: subtitle,
+        link: link,
+        showTimer: showTimer,
       );
       return;
     }
@@ -247,7 +346,7 @@ class TimerNotificationService {
       await _removeCountdown(); // replaces the old text
       await LiveActivity.show(
         id: _activityId,
-        deepLink: FocusNotificationNavigation.timerLink,
+        deepLink: link,
         theme: LATheme(
           background: dark.background,
           foreground: dark.text,
@@ -313,6 +412,8 @@ class TimerNotificationService {
     required DateTime until,
     required String title,
     required String subtitle,
+    required String link,
+    bool showTimer = true,
   }) async {
     final remaining = until.difference(DateTime.now()).inMilliseconds;
     try {
@@ -332,16 +433,16 @@ class TimerNotificationService {
             autoCancel: false,
             onlyAlertOnce: true,
             silent: true,
-            showWhen: true,
-            when: until.millisecondsSinceEpoch,
-            usesChronometer: true,
-            chronometerCountDown: true,
+            showWhen: showTimer,
+            when: showTimer ? until.millisecondsSinceEpoch : null,
+            usesChronometer: showTimer,
+            chronometerCountDown: showTimer,
             timeoutAfter: max(1000, remaining + 1000),
             color: AppColors.lightBrown,
             visibility: NotificationVisibility.public,
           ),
         ),
-        payload: FocusNotificationNavigation.timerLink,
+        payload: link,
       );
     } catch (error) {
       debugPrint('Unable to show focus notification: $error');

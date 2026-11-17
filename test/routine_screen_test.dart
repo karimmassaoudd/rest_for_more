@@ -4,10 +4,14 @@ import 'package:flutter_application_rest_for_more/models/routines/routine_step.d
 import 'package:flutter_application_rest_for_more/screens/routines/routine_screen.dart';
 import 'package:flutter_application_rest_for_more/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_application_rest_for_more/services/routines/routine_session_controller.dart';
 
 void main() {
   // The default morning routine has 5 steps; the first 3 start done.
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    RoutineSessionController.instance.resetForTest();
+  });
 
   Future<void> pumpMorning(WidgetTester tester) async {
     await tester.pumpWidget(

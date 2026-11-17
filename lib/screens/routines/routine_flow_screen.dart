@@ -4,21 +4,19 @@ import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../models/routines/routine_time.dart';
+import '../../services/routines/routine_session_controller.dart';
 import '../../theme/app_fonts.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/focus/timer_dial.dart';
 import '../../widgets/focus/timer_primary_button.dart';
+import '../../widgets/routines/blocked_until_note.dart';
 
-/// One routine activity at a time, in the same layout as the focus timer:
-/// title, "Activity 4 of 5", the sunburst dial, and the buttons below.
+/// One routine activity at a time, in the same layout as the focus timer.
 ///
-/// Opens at [initialIndex] (or the first open step). "Complete activity"
-/// moves on to the next open step. A step that is already done shows
-/// "Done" with a "Mark as not done" button.
-///
-/// The timer only runs while this screen is open for now; running in the
-/// background (with app blocking) comes with RoutineSessionController.
+/// Opening a step starts its timer in [RoutineSessionController], so it
+/// keeps running after going back. The first started step of a routine
+/// also starts blocking the period's apps.
 class RoutineFlowScreen extends StatefulWidget {
   const RoutineFlowScreen({
     super.key,
@@ -46,16 +44,15 @@ class RoutineFlowScreen extends StatefulWidget {
 }
 
 class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
+  final _session = RoutineSessionController.instance;
   late final Set<int> _completed;
   late int _currentIndex;
-  Timer? _timer;
-  int _secondsRemaining = 0;
-  int _totalSeconds = 0;
-  bool _isTimerRunning = false;
+  Timer? _ticker;
+  int _shownSecond = -1;
   bool _isCompleting = false;
 
   // ------------------------------------------------------------------
-  // State
+  // Lifecycle
   // ------------------------------------------------------------------
 
   @override
@@ -69,25 +66,72 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     _currentIndex = start != null && start >= 0 && start < widget.steps.length
         ? start
         : _nextIncompleteIndex(0);
-    if (_currentIndex != -1 && !_isCurrentDone) _resetTimer();
+
+    _session.addListener(_onSessionChanged);
+    // Redraws only when the visible second changes.
+    _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      _session.tick();
+      final second = (_millisLeft / 1000).ceil();
+      if (second != _shownSecond && mounted) {
+        setState(() => _shownSecond = second);
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startCurrentStep());
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _ticker?.cancel();
+    _session.removeListener(_onSessionChanged);
     super.dispose();
   }
 
-  /// True when every step is done (or there are no steps).
+  void _onSessionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  // ------------------------------------------------------------------
+  // Values
+  // ------------------------------------------------------------------
+
   bool get _isComplete => _currentIndex == -1;
 
-  /// True when the step on screen is already ticked off.
   bool get _isCurrentDone =>
       _currentIndex != -1 && _completed.contains(_currentIndex);
 
-  /// How full the dial is: 1.0 at the start, 0.0 when time is up.
+  String get _currentTitle => widget.steps[_currentIndex].title;
+
+  int _minutesOf(int index) =>
+      minutesInDuration(widget.steps[index].duration) ?? 5;
+
+  /// Minutes of every step that isn't done yet (for the blocking end time).
+  int get _openMinutes {
+    var total = 0;
+    for (var i = 0; i < widget.steps.length; i++) {
+      if (!_completed.contains(i)) total += _minutesOf(i);
+    }
+    return total;
+  }
+
+  /// True when the session's running step is the one on screen.
+  bool get _isMine =>
+      !_isComplete &&
+      _session.isRunningFor(widget.period) &&
+      _session.activeStep == _currentTitle;
+
+  int get _totalMillis =>
+      _isMine ? _session.stepTotalMillis : _minutesOf(_currentIndex) * 60000;
+
+  int get _millisLeft {
+    if (_isComplete || _isCurrentDone) return 0;
+    return _isMine ? _session.stepRemainingMillis : _totalMillis;
+  }
+
   double get _progress =>
-      _totalSeconds == 0 ? 0.0 : (_secondsRemaining / _totalSeconds);
+      _totalMillis == 0 ? 0.0 : (_millisLeft / _totalMillis).clamp(0.0, 1.0);
+
+  bool get _isTimeUp => _isMine && _millisLeft == 0;
 
   int _nextIncompleteIndex(int start) {
     for (var index = start; index < widget.steps.length; index++) {
@@ -97,54 +141,58 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
   }
 
   // ------------------------------------------------------------------
-  // Timer (on screen only for now)
+  // Actions
   // ------------------------------------------------------------------
 
-  void _resetTimer() {
-    _timer?.cancel();
-    _totalSeconds =
-        (minutesInDuration(widget.steps[_currentIndex].duration) ?? 5) * 60;
-    _secondsRemaining = _totalSeconds;
-    _isTimerRunning = true;
-    _startTimer();
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted || !_isTimerRunning) return;
-      if (_secondsRemaining <= 1) {
-        timer.cancel();
-        setState(() {
-          _secondsRemaining = 0;
-          _isTimerRunning = false;
-        });
-      } else {
-        setState(() => _secondsRemaining--);
-      }
-    });
-  }
-
-  void _toggleTimer() {
-    if (_isCompleting || _isComplete || _secondsRemaining == 0) return;
-    setState(() => _isTimerRunning = !_isTimerRunning);
-    if (_isTimerRunning) {
-      _startTimer();
-    } else {
-      _timer?.cancel();
+  /// Starts (or continues) the step on screen, and blocking with it.
+  Future<void> _startCurrentStep() async {
+    if (!mounted || _isComplete || _isCurrentDone) return;
+    final result = await _session.startStep(
+      context,
+      period: widget.period,
+      step: _currentTitle,
+      stepMinutes: _minutesOf(_currentIndex),
+      openMinutes: _openMinutes,
+    );
+    if (!mounted) return;
+    switch (result) {
+      case RoutineStartResult.started:
+        break;
+      case RoutineStartResult.focusRunning:
+        _leaveWith(
+          'A focus session is running. End it before starting your routine.',
+        );
+      case RoutineStartResult.otherRoutineRunning:
+        _leaveWith('Your other routine is still running.');
     }
   }
 
-  // ------------------------------------------------------------------
-  // Actions
-  // ------------------------------------------------------------------
+  void _leaveWith(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+    Navigator.maybePop(context);
+  }
+
+  void _togglePause() {
+    if (_isCompleting || _isComplete) return;
+    if (!_isMine) {
+      unawaited(_startCurrentStep());
+    } else if (_session.isPaused) {
+      unawaited(_session.resumeStep());
+    } else {
+      unawaited(_session.pauseStep());
+    }
+  }
 
   Future<void> _completeCurrentStep() async {
     if (_isCompleting || _isComplete) return;
     final completedIndex = _currentIndex;
+    final title = _currentTitle;
     setState(() => _isCompleting = true);
     try {
       await widget.onStepCompleted(completedIndex);
+      await _session.completeStep(title);
       if (!mounted) return;
       setState(() {
         _completed.add(completedIndex);
@@ -152,12 +200,8 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         final after = _nextIncompleteIndex(completedIndex + 1);
         _currentIndex = after != -1 ? after : _nextIncompleteIndex(0);
         _isCompleting = false;
-        if (_currentIndex != -1) {
-          _resetTimer();
-        } else {
-          _timer?.cancel();
-        }
       });
+      await _startCurrentStep();
     } catch (_) {
       if (!mounted) return;
       setState(() => _isCompleting = false);
@@ -177,8 +221,8 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
       setState(() {
         _completed.remove(index);
         _isCompleting = false;
-        _resetTimer();
       });
+      await _startCurrentStep();
     } catch (_) {
       if (!mounted) return;
       setState(() => _isCompleting = false);
@@ -201,9 +245,6 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
   @override
   Widget build(BuildContext context) {
     final palette = context.palette;
-    final routineName = widget.period == RoutinePeriod.morning
-        ? 'Morning'
-        : 'Evening';
 
     return Scaffold(
       backgroundColor: palette.background,
@@ -211,7 +252,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RfmAppBar(title: routineName),
+            RfmAppBar(title: routineName(widget.period)),
             const SizedBox(height: 28),
             _buildIntro(palette),
             Expanded(child: Center(child: _buildCenter(palette))),
@@ -222,7 +263,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     );
   }
 
-  /// Step title + "Activity 4 of 5", in the focus timer's intro fonts.
+  /// Step title + "Activity 4 of 5", and the blocked-until note.
   Widget _buildIntro(AppPalette palette) {
     final isEmpty = widget.steps.isEmpty;
     final String title;
@@ -233,7 +274,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
           ? 'This routine has no activities yet.'
           : 'Every activity is saved.';
     } else {
-      title = widget.steps[_currentIndex].title;
+      title = _currentTitle;
       subtitle = 'Activity ${_currentIndex + 1} of ${widget.steps.length}';
     }
 
@@ -257,6 +298,15 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
             key: const Key('routine-flow-progress'),
             style: AppFonts.cormorant(size: 15, color: palette.muted),
           ),
+          if (_isTimeUp) ...[
+            const SizedBox(height: 2),
+            Text(
+              "Time's up. Complete it when you're ready.",
+              style: AppFonts.cormorant(size: 15, color: palette.accent),
+            ),
+          ],
+          const SizedBox(height: 14),
+          BlockedUntilNote(period: widget.period),
         ],
       ),
     );
@@ -282,7 +332,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         ],
       );
     }
-    return TimerDial(progress: _progress, millisLeft: _secondsRemaining * 1000);
+    return TimerDial(progress: _progress, millisLeft: _millisLeft);
   }
 
   /// Like the focus timer: one big button, and a text button under it.
@@ -308,12 +358,12 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         label: _isCompleting ? 'Saving...' : 'Complete activity',
         onPressed: _isCompleting ? null : _completeCurrentStep,
       );
-      // No pause once the time is up.
-      if (_secondsRemaining > 0) {
+      if (!_isTimeUp) {
+        final running = _isMine && !_session.isPaused;
         secondary = _textButton(
           key: const Key('routine-flow-pause-button'),
-          label: _isTimerRunning ? 'Pause' : 'Resume',
-          onPressed: _toggleTimer,
+          label: running ? 'Pause' : 'Resume',
+          onPressed: _togglePause,
           palette: palette,
         );
       }

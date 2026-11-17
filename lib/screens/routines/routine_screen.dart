@@ -14,6 +14,8 @@ import '../../widgets/routines/completion_banner.dart';
 import '../../widgets/routines/routine_item_card.dart';
 import '../../widgets/routines/steps_heading.dart';
 import 'routine_flow_screen.dart';
+import '../../services/routines/routine_session_controller.dart';
+import '../../widgets/routines/blocked_until_note.dart';
 
 /// The morning or evening routine (view only): progress, the list of
 /// steps, and a button that opens the guided flow through the open steps.
@@ -24,10 +26,14 @@ class RoutineScreen extends StatefulWidget {
   const RoutineScreen({
     super.key,
     required this.period,
+    this.openActiveStep = false,
     this.progressStorage = const RoutineProgressStorage(),
   });
 
   final RoutinePeriod period;
+
+  /// Opened from the routine notification: go straight to the running step.
+  final bool openActiveStep;
 
   /// Replaceable in tests.
   final RoutineProgressStorage progressStorage;
@@ -61,7 +67,18 @@ class _RoutineScreenState extends State<RoutineScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(_loadProgress());
+    unawaited(_loadProgress().then((_) => _maybeOpenActiveStep()));
+  }
+
+  /// From the notification: open the step whose timer is running.
+  void _maybeOpenActiveStep() {
+    if (!widget.openActiveStep || !mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final active = RoutineSessionController.instance.activeStep;
+      final index = _steps.indexWhere((step) => step.title == active);
+      unawaited(index == -1 ? _openFlow() : _openStep(index));
+    });
   }
 
   Future<void> _loadProgress() async {
@@ -116,6 +133,11 @@ class _RoutineScreenState extends State<RoutineScreen> {
     updated[index] = step.copyWith(isCompleted: nowCompleted);
     setState(() => _setSteps(updated));
     unawaited(_saveWithFeedback());
+
+    // Ticked the step whose timer runs: stop its timer (blocking continues).
+    if (nowCompleted) {
+      unawaited(RoutineSessionController.instance.completeStep(step.title));
+    }
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
@@ -232,7 +254,9 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           completed: _completed,
                           total: _steps.length,
                         ),
-                        const SizedBox(height: 26),
+                        const SizedBox(height: 12),
+                        BlockedUntilNote(period: widget.period),
+                        const SizedBox(height: 14),
                         StepsHeading(remaining: _remaining, palette: palette),
                         const SizedBox(height: 12),
                         for (var index = 0; index < _steps.length; index++)
@@ -259,10 +283,15 @@ class _RoutineScreenState extends State<RoutineScreen> {
                         ),
                         const SizedBox(height: 10),
                         if (_remaining > 0)
-                          BottomActionDock(
-                            period: widget.period,
-                            palette: palette,
-                            onStartRoutine: _startRoutineFlow,
+                          ListenableBuilder(
+                            listenable: RoutineSessionController.instance,
+                            builder: (context, _) => BottomActionDock(
+                              period: widget.period,
+                              palette: palette,
+                              isRunning: RoutineSessionController.instance
+                                  .isRunningFor(widget.period),
+                              onStartRoutine: _startRoutineFlow,
+                            ),
                           ),
                       ],
                     ),

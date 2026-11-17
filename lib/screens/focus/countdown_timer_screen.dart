@@ -13,6 +13,7 @@ import '../../widgets/common/confirm_dialog.dart';
 import '../../widgets/focus/duration_presets.dart';
 import '../../widgets/focus/timer_dial.dart';
 import '../../widgets/focus/timer_primary_button.dart';
+import '../../services/routines/routine_session_controller.dart';
 
 /// Focus timer for one [profile].
 ///
@@ -96,6 +97,21 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
   /// Asks for the blocking permission if needed, then starts the session.
   Future<void> _onStartPressed() async {
     if (_controller.remainingMillis <= 0) return;
+
+    final routine = RoutineSessionController.instance.period;
+    if (routine != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Your ${routineName(routine).toLowerCase()} routine is still '
+              "running. You can start a focus session when it's over.",
+            ),
+          ),
+        );
+      return;
+    }
 
     final granted = await _blocking.ensurePermission(context);
     if (!granted || !mounted) return;

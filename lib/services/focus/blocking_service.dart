@@ -96,8 +96,16 @@ class BlockingService {
   }
 
   /// Blocks the profile's apps, except the always-available ones.
-  Future<void> startBlocking(BlockProfile profile) async {
-    await _configureBlockScreen(profile.name);
+  /// Routines pass their own block-screen texts.
+  Future<void> startBlocking(
+    BlockProfile profile, {
+    String? subtitle,
+    String? timerLabel,
+  }) async {
+    await _configureBlockScreen(
+      subtitle: subtitle ?? '${profile.name} session in progress',
+      timerLabel: timerLabel ?? '{timeLeft} remaining',
+    );
 
     final stored = await _alwaysAvailableStore.getAlwaysAvailableApps(
       profile.id,
@@ -119,15 +127,27 @@ class BlockingService {
     }
   }
 
+  /// Routines: unblocks everything but leaves the focus session alone.
+  Future<void> unblockApps() => _blocker.unblockAll();
+
+  /// Routines: changes the block-screen texts while blocking.
+  Future<void> updateBlockScreen({
+    required String subtitle,
+    required String timerLabel,
+  }) => _configureBlockScreen(subtitle: subtitle, timerLabel: timerLabel);
+
   /// The screen shown when the user opens a blocked app.
   /// {appName} and {timeLeft} are filled in by the plugin. The background
   /// stays dark brown in both themes: the plugin draws it natively.
-  Future<void> _configureBlockScreen(String profileName) async {
+  Future<void> _configureBlockScreen({
+    required String subtitle,
+    required String timerLabel,
+  }) async {
     await _blocker.setBlockScreenConfig(
       BlockScreenConfig(
         title: '{appName} app is blocked',
-        subtitle: '$profileName session in progress',
-        timerLabel: '{timeLeft} remaining',
+        subtitle: subtitle,
+        timerLabel: timerLabel,
         backgroundColor: AppColors.darkBrown,
         returnHomeButtonText: 'Return to Home',
         emergencyButtonText: 'Emergency Unlock',

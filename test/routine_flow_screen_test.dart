@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_rest_for_more/models/routines/routine_step.dart';
 import 'package:flutter_application_rest_for_more/screens/routines/routine_flow_screen.dart';
 import 'package:flutter_application_rest_for_more/theme/app_theme.dart';
+import 'package:flutter_application_rest_for_more/services/routines/routine_session_controller.dart';
 
 void main() {
+  setUp(() => RoutineSessionController.instance.resetForTest());
   Widget buildSubject({
     required List<RoutineStep> steps,
     required Future<void> Function(int) onStepCompleted,

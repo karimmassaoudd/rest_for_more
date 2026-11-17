@@ -8,6 +8,7 @@ import 'blocking_service.dart';
 import 'keep_timer_running.dart';
 import 'session_store.dart';
 import 'timer_notification_service.dart';
+import '../routines/routine_session_controller.dart';
 
 /// All logic behind the timer screen for one [profile]: choosing a duration,
 /// starting and stopping the session, breaks, and the countdown itself.
@@ -108,7 +109,10 @@ class SessionController extends ChangeNotifier {
         hasStarted = false;
         remainingMillis = totalMillis;
         _resetBreakState();
-        await _alerts.cancelAll();
+        // Don't remove a running routine's notification.
+        if (!RoutineSessionController.instance.isActive) {
+          await _alerts.cancelAll();
+        }
         await KeepRunningTimerClock.instance.refresh();
         _notify();
       }

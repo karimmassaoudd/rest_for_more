@@ -10,6 +10,7 @@ import 'services/focus/timer_notification_service.dart';
 import 'services/onboarding/welcome_choice_store.dart';
 import 'services/settings/locale_controller.dart';
 import 'services/settings/theme_controller.dart';
+import 'services/routines/routine_session_controller.dart';
 import 'theme/app_theme.dart';
 
 /// App entry point.
@@ -35,6 +36,8 @@ Future<void> main() async {
 
   await TimerNotificationService.instance.init();
   await ensureCoreProfiles();
+  // Continue a running routine, or unblock if its time is over.
+  await RoutineSessionController.instance.restore();
   await WelcomeChoiceStore.instance.load();
 
   runApp(const MyApp());
@@ -61,7 +64,10 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    FocusNotificationNavigation.instance.start(openTimer: _openActiveTimer);
+    FocusNotificationNavigation.instance.start(
+      openTimer: _openActiveTimer,
+      openRoutine: _openActiveRoutine,
+    );
   }
 
   @override
@@ -78,6 +84,15 @@ class _MyAppState extends State<MyApp> {
     } catch (error) {
       debugPrint('Failed to open active timer: $error');
     }
+  }
+
+  /// Tapping the routine countdown: open the routine at its running step.
+  Future<void> _openActiveRoutine() async {
+    final session = RoutineSessionController.instance;
+    await session.restore();
+    final period = session.period;
+    if (!mounted || period == null) return;
+    router.go('/routine?period=${period.name}&open=active');
   }
 
   @override

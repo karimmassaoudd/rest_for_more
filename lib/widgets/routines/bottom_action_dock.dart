@@ -11,8 +11,12 @@ class BottomActionDock extends StatelessWidget {
     required this.period,
     required this.palette,
     required this.onStartRoutine,
+    this.isRunning = false,
   });
   final RoutinePeriod period;
+
+  /// While the routine runs the button says "Continue routine".
+  final bool isRunning;
   final RoutinePalette palette;
   final VoidCallback onStartRoutine;
 
@@ -47,7 +51,11 @@ class BottomActionDock extends StatelessWidget {
               size: 16,
             ),
             const SizedBox(width: 8),
-            Text(morning ? 'Start your morning' : 'Start evening'),
+            Text(
+              isRunning
+                  ? 'Continue routine'
+                  : (morning ? 'Start your morning' : 'Start evening'),
+            ),
           ],
         ),
       ),

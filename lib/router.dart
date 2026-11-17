@@ -144,6 +144,7 @@ final GoRouter router = GoRouter(
         final evening = state.uri.queryParameters['period'] == 'evening';
         return RoutineScreen(
           period: evening ? RoutinePeriod.evening : RoutinePeriod.morning,
+          openActiveStep: state.uri.queryParameters['open'] == 'active',
         );
       },
     ),
