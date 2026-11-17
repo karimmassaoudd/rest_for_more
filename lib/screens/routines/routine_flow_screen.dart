@@ -17,6 +17,8 @@ class RoutineFlowScreen extends StatefulWidget {
     required this.period,
     required this.steps,
     required this.onStepCompleted,
+    this.onStepReopened,
+    this.initialIndex,
   });
 
   final RoutinePeriod period;
@@ -24,6 +26,12 @@ class RoutineFlowScreen extends StatefulWidget {
 
   /// Persists [index]. The flow advances only after this future succeeds.
   final Future<void> Function(int index) onStepCompleted;
+
+  /// Persists un-ticking [index] ("Mark as not done").
+  final Future<void> Function(int index)? onStepReopened;
+
+  /// The step to open. Null: the first step that isn't done.
+  final int? initialIndex;
 
   @override
   State<RoutineFlowScreen> createState() => _RoutineFlowScreenState();
@@ -45,8 +53,40 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
       for (var index = 0; index < widget.steps.length; index++)
         if (widget.steps[index].isCompleted) index,
     };
-    _currentIndex = _nextIncompleteIndex(0);
-    if (_currentIndex != -1) _resetTimer();
+    final start = widget.initialIndex;
+    _currentIndex = start != null && start >= 0 && start < widget.steps.length
+        ? start
+        : _nextIncompleteIndex(0);
+    if (_currentIndex != -1 && !_isCurrentDone) _resetTimer();
+  }
+
+  /// True when the step on screen is already ticked off.
+  bool get _isCurrentDone =>
+      _currentIndex != -1 && _completed.contains(_currentIndex);
+
+  /// "Mark as not done" on a step that was already done.
+  Future<void> _reopenCurrentStep() async {
+    final reopen = widget.onStepReopened;
+    if (reopen == null || _isCompleting || !_isCurrentDone) return;
+    final index = _currentIndex;
+    setState(() => _isCompleting = true);
+    try {
+      await reopen(index);
+      if (!mounted) return;
+      setState(() {
+        _completed.remove(index);
+        _isCompleting = false;
+        _resetTimer();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isCompleting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not save routine progress. Please try again.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -106,7 +146,9 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
       if (!mounted) return;
       setState(() {
         _completed.add(completedIndex);
-        _currentIndex = _nextIncompleteIndex(completedIndex + 1);
+        // Next open step after this one; otherwise wrap to an earlier one.
+        final after = _nextIncompleteIndex(completedIndex + 1);
+        _currentIndex = after != -1 ? after : _nextIncompleteIndex(0);
         _isCompleting = false;
         if (_currentIndex != -1) _resetTimer();
       });
@@ -203,27 +245,51 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                 const SizedBox(height: 22),
                 Expanded(
                   child: Center(
-                    child: _TimerDisplay(
-                      seconds: _secondsRemaining,
-                      total: _totalSeconds,
-                      palette: palette,
+                    child: _isCurrentDone
+                        ? Row(
+                            key: const Key('routine-flow-done'),
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: palette.accent,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Done',
+                                style: AppFonts.cormorant(
+                                  size: 30,
+                                  weight: FontWeight.w600,
+                                  color: palette.text,
+                                ),
+                              ),
+                            ],
+                          )
+                        : _TimerDisplay(
+                            seconds: _secondsRemaining,
+                            total: _totalSeconds,
+                            palette: palette,
+                          ),
+                  ),
+                ),
+                if (!_isCurrentDone)
+                  OutlinedButton.icon(
+                    key: const Key('routine-flow-pause-button'),
+                    onPressed: _toggleTimer,
+                    icon: Icon(
+                      _isTimerRunning
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                    ),
+                    label: Text(
+                      _isTimerRunning ? 'Pause timer' : 'Resume timer',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: palette.text,
+                      side: BorderSide(color: palette.border),
                     ),
                   ),
-                ),
-                OutlinedButton.icon(
-                  key: const Key('routine-flow-pause-button'),
-                  onPressed: _toggleTimer,
-                  icon: Icon(
-                    _isTimerRunning
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                  ),
-                  label: Text(_isTimerRunning ? 'Pause timer' : 'Resume timer'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: palette.text,
-                    side: BorderSide(color: palette.border),
-                  ),
-                ),
               ],
               const SizedBox(height: 20),
               SizedBox(
@@ -233,13 +299,17 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                   key: Key(
                     isComplete
                         ? 'return-to-overview-button'
+                        : _isCurrentDone
+                        ? 'reopen-routine-step-button'
                         : 'complete-routine-step-button',
                   ),
                   onPressed: _isCompleting
                       ? null
-                      : (isComplete
-                            ? () => Navigator.maybePop(context)
-                            : _completeCurrentStep),
+                      : isComplete
+                      ? () => Navigator.maybePop(context)
+                      : _isCurrentDone
+                      ? _reopenCurrentStep
+                      : _completeCurrentStep,
                   icon: _isCompleting
                       ? const SizedBox(
                           width: 18,
@@ -249,12 +319,18 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
                       : Icon(
                           isComplete
                               ? Icons.arrow_back_rounded
+                              : _isCurrentDone
+                              ? Icons.undo_rounded
                               : Icons.check_rounded,
                         ),
                   label: Text(
                     isComplete
                         ? 'Return to overview'
-                        : (_isCompleting ? 'Saving...' : 'Complete activity'),
+                        : _isCompleting
+                        ? 'Saving...'
+                        : _isCurrentDone
+                        ? 'Mark as not done'
+                        : 'Complete activity',
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: palette.button,

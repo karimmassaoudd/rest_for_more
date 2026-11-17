@@ -107,13 +107,31 @@ class _RoutineScreenState extends State<RoutineScreen> {
   // Actions
   // ------------------------------------------------------------------
 
-  void _toggleStep(int index) {
+  /// Swipe on a step: tick it, or untick it when it's already done.
+  /// Ticking shows an "Undo" snackbar.
+  void _toggleStep(int index, {bool offerUndo = true}) {
+    final step = _steps[index];
+    final nowCompleted = !step.isCompleted;
     final updated = List<RoutineStep>.of(_steps);
-    updated[index] = updated[index].copyWith(
-      isCompleted: !updated[index].isCompleted,
-    );
+    updated[index] = step.copyWith(isCompleted: nowCompleted);
     setState(() => _setSteps(updated));
     unawaited(_saveWithFeedback());
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    if (nowCompleted && offerUndo) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('${step.title} done'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              if (mounted) _toggleStep(index, offerUndo: false);
+            },
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _saveWithFeedback() async {
@@ -127,10 +145,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
     }
   }
 
-  /// Opens the remaining activities as one continuous routine.
+  /// Tap on a step: open that step's activity. Doesn't tick it.
+  Future<void> _openStep(int index) => _openFlow(initialIndex: index);
+
+  /// The button at the bottom: opens the first open step.
   Future<void> _startRoutineFlow() async {
-    final hasOpenStep = _steps.any((step) => !step.isCompleted);
-    if (!hasOpenStep) {
+    if (!_steps.any((step) => !step.isCompleted)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -142,26 +162,34 @@ class _RoutineScreenState extends State<RoutineScreen> {
       );
       return;
     }
+    await _openFlow();
+  }
 
+  Future<void> _openFlow({int? initialIndex}) async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => RoutineFlowScreen(
           period: widget.period,
           steps: _steps,
-          onStepCompleted: _completeStepAndSave,
+          initialIndex: initialIndex,
+          onStepCompleted: (index) => _setCompletedAndSave(index, true),
+          onStepReopened: (index) => _setCompletedAndSave(index, false),
         ),
       ),
     );
   }
 
-  /// Called by the flow; it only moves on after this succeeds.
-  Future<void> _completeStepAndSave(int index) async {
+  /// Called by the activity screen; it only moves on after this succeeds.
+  Future<void> _setCompletedAndSave(int index, bool completed) async {
     final original = _steps;
-    if (index < 0 || index >= original.length || original[index].isCompleted) {
+    if (index < 0 ||
+        index >= original.length ||
+        original[index].isCompleted == completed) {
       return;
     }
     final updated = List<RoutineStep>.of(original);
-    updated[index] = updated[index].copyWith(isCompleted: true);
+    updated[index] = updated[index].copyWith(isCompleted: completed);
     _setSteps(updated);
     if (mounted) setState(() {});
     try {
@@ -214,6 +242,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
                             isActive: index == activeIndex,
                             period: widget.period,
                             palette: palette,
+                            onOpen: () => _openStep(index),
                             onToggle: () => _toggleStep(index),
                           ),
                         AnimatedSwitcher(
@@ -229,11 +258,12 @@ class _RoutineScreenState extends State<RoutineScreen> {
                               : const SizedBox.shrink(),
                         ),
                         const SizedBox(height: 10),
-                        BottomActionDock(
-                          period: widget.period,
-                          palette: palette,
-                          onStartRoutine: _startRoutineFlow,
-                        ),
+                        if (_remaining > 0)
+                          BottomActionDock(
+                            period: widget.period,
+                            palette: palette,
+                            onStartRoutine: _startRoutineFlow,
+                          ),
                       ],
                     ),
                   ),

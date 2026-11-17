@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
-/// One step in the routine list: time, a round check button with an icon
+/// One step in the routine list: time, a round to-do circle with an icon
 /// picked from the title, name and duration.
-/// Tapping anywhere on the card ticks or unticks the step.
+///
+/// Tap opens the step. Swipe right ticks it off, or unticks it when it's
+/// already done. When done, the icon stays: the circle gets an accent ring
+/// and a small ✓ badge.
 class RoutineItemCard extends StatelessWidget {
   const RoutineItemCard({
     super.key,
@@ -14,6 +18,7 @@ class RoutineItemCard extends StatelessWidget {
     required this.isActive,
     required this.period,
     required this.palette,
+    required this.onOpen,
     required this.onToggle,
   });
 
@@ -22,6 +27,11 @@ class RoutineItemCard extends StatelessWidget {
   final bool isActive;
   final RoutinePeriod period;
   final RoutinePalette palette;
+
+  /// Tap: open this step's activity screen.
+  final VoidCallback onOpen;
+
+  /// Swipe (or the screen-reader action): tick or untick the step.
   final VoidCallback onToggle;
 
   /// Picks an icon from words in the title ("shower", "journal", …).
@@ -48,96 +58,112 @@ class RoutineItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completed = step.isCompleted;
-    final evening = period == RoutinePeriod.evening;
 
-    return Semantics(
-      button: true,
-      checked: completed,
-      label: '${step.title}, ${step.time}, ${step.duration}',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: isActive && !completed ? Key('check-button-$index') : null,
-          onTap: onToggle,
-          borderRadius: BorderRadius.circular(14),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
-            decoration: BoxDecoration(
-              color: evening
-                  ? palette.card
-                  : completed
-                  ? palette.accentSoft.withValues(alpha: 0.38)
-                  : isActive
-                  ? palette.card.withValues(alpha: 0.72)
-                  : Colors.transparent,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Dismissible(
+        key: ValueKey('routine-swipe-${step.title}'),
+        direction: DismissDirection.startToEnd,
+        // The card never leaves the list: a swipe only ticks or unticks it.
+        confirmDismiss: (_) async {
+          onToggle();
+          return false;
+        },
+        background: _SwipeBackground(completed: completed, palette: palette),
+        child: Semantics(
+          button: true,
+          checked: completed,
+          label: '${step.title}, ${step.time}, ${step.duration}',
+          onTapHint: 'Open activity',
+          customSemanticsActions: {
+            CustomSemanticsAction(
+              label: completed ? 'Mark as not done' : 'Mark as done',
+            ): onToggle,
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: Key('routine-step-$index'),
+              onTap: onOpen,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isActive
-                    ? palette.accent.withValues(alpha: 0.38)
-                    : evening
-                    ? Colors.transparent
-                    : palette.border.withValues(alpha: 0.18),
-              ),
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: palette.text.withValues(alpha: 0.045),
-                        blurRadius: 14,
-                        offset: const Offset(0, 5),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 52,
-                  child: Text(
-                    step.time.replaceAll(' AM', '').replaceAll(' PM', ''),
-                    style: TextStyle(
-                      color: completed ? palette.muted : palette.text,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                    ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  color: completed
+                      ? palette.accentSoft.withValues(alpha: 0.38)
+                      : palette.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isActive
+                        ? palette.accent.withValues(alpha: 0.38)
+                        : Colors.transparent,
                   ),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: palette.text.withValues(alpha: 0.045),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5),
+                          ),
+                        ]
+                      : null,
                 ),
-                _CompletionControl(
-                  key: Key('routine-toggle-$index'),
-                  completed: completed,
-                  active: isActive,
-                  icon: _iconForStep(),
-                  palette: palette,
-                  onTap: onToggle,
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        step.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 52,
+                      child: Text(
+                        step.time.replaceAll(' AM', '').replaceAll(' PM', ''),
                         style: TextStyle(
                           color: completed ? palette.muted : palette.text,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          decoration: completed
-                              ? TextDecoration.lineThrough
-                              : null,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        step.duration,
-                        style: TextStyle(color: palette.muted, fontSize: 9.5),
+                    ),
+                    _StepIcon(
+                      key: Key('routine-step-icon-$index'),
+                      icon: _iconForStep(),
+                      completed: completed,
+                      active: isActive,
+                      palette: palette,
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            step.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: completed ? palette.muted : palette.text,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              decoration: completed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            step.duration,
+                            style: TextStyle(
+                              color: palette.muted,
+                              fontSize: 9.5,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -146,46 +172,109 @@ class RoutineItemCard extends StatelessWidget {
   }
 }
 
-/// The round button on the left of a step: its icon, or a check when done.
-class _CompletionControl extends StatelessWidget {
-  const _CompletionControl({
+/// The round to-do circle: the step's icon always stays visible.
+/// Done: accent ring + a small ✓ badge in the corner.
+class _StepIcon extends StatelessWidget {
+  const _StepIcon({
     super.key,
+    required this.icon,
     required this.completed,
     required this.active,
-    required this.icon,
     required this.palette,
-    required this.onTap,
   });
 
+  final IconData icon;
   final bool completed;
   final bool active;
-  final IconData icon;
   final RoutinePalette palette;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: completed ? palette.accent : palette.surface,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 29,
-          height: 29,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: active && !completed
-                ? Border.all(color: palette.accent, width: 1.2)
-                : null,
+    return SizedBox(
+      width: 33,
+      height: 33,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: completed ? palette.accentSoft : palette.surface,
+              border: Border.all(
+                color: completed || active
+                    ? palette.accent
+                    : palette.border.withValues(alpha: 0.5),
+                width: completed ? 1.6 : 1.2,
+              ),
+            ),
+            child: Icon(
+              icon,
+              size: 15,
+              color: completed ? palette.accent : palette.muted,
+            ),
           ),
-          child: Icon(
-            completed ? Icons.check_rounded : icon,
-            size: 15,
-            color: completed ? palette.buttonText : palette.muted,
+          if (completed)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: palette.accent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: palette.background, width: 1.5),
+                ),
+                child: Icon(
+                  Icons.check_rounded,
+                  size: 9,
+                  color: palette.buttonText,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What shows behind the card while it's swiped: "Done" or "Undo".
+class _SwipeBackground extends StatelessWidget {
+  const _SwipeBackground({required this.completed, required this.palette});
+
+  final bool completed;
+  final RoutinePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      decoration: BoxDecoration(
+        color: palette.accentSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            completed ? Icons.undo_rounded : Icons.check_rounded,
+            color: palette.accent,
+            size: 18,
           ),
-        ),
+          const SizedBox(width: 8),
+          Text(
+            completed ? 'Undo' : 'Done',
+            style: TextStyle(
+              color: palette.accent,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
