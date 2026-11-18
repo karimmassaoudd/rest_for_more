@@ -8,9 +8,8 @@ import '../../theme/app_colors.dart';
 /// name and duration, and a to-do circle on the right.
 ///
 /// Tap opens the activity. Tapping the circle or swiping either way ticks
-/// it off, or unticks it
-/// when it's already done. Done: muted icon, strikethrough title and a
-/// filled ✓ on the right.
+/// it off, or unticks it when it's already done.
+/// Done: muted icon, strikethrough title and a filled ✓ on the right.
 class RoutineItemCard extends StatelessWidget {
   const RoutineItemCard({
     super.key,
@@ -169,9 +168,8 @@ class RoutineItemCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-
-                    /// The to-do circle on the right (inside a button): empty while open,
-                    /// a filled ✓ when done.
+                    // The to-do circle on the right (inside a button): empty while open,
+                    // a filled ✓ when done.
                     IconButton(
                       key: Key('routine-step-done-$index'),
                       onPressed: onToggle,
