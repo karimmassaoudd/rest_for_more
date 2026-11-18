@@ -76,7 +76,7 @@ class _CustomTimePageState extends State<CustomTimePage> {
       },
       child: Scaffold(
         backgroundColor: context.palette.background,
-        appBar: rfmScaffoldAppBar(title: 'Custom Timer', onBack: _close),
+        appBar: rfmScaffoldAppBar(title: 'Custom timer', onBack: _close),
         body: SafeArea(
           child: Column(
             children: [

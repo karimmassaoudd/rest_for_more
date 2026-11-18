@@ -51,7 +51,7 @@ class _EditBlockedAppsScreenState extends State<EditBlockedAppsScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return AppSelectionScreen(
-      title: 'Edit Blocked Apps',
+      title: 'Edit blocked apps',
       listName: 'blocked apps',
       loadInitialSelection: () async => widget.profile.appIdentifiers.toSet(),
       suggestedPackageNames: commonlyDistractingApps,

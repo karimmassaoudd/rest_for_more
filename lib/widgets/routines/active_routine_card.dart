@@ -51,7 +51,7 @@ class ActiveRoutineCard extends StatelessWidget {
               ),
               const SizedBox(width: 5),
               Text(
-                'tasks completed',
+                'activities done',
                 style: TextStyle(color: palette.muted, fontSize: 10.5),
               ),
               const Spacer(),

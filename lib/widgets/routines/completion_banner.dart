@@ -38,7 +38,7 @@ class CompletionBanner extends StatelessWidget {
           const SizedBox(width: 9),
 
           Text(
-            morning ? 'Morning Routine Complete' : 'Sleep Mode Activated',
+            morning ? 'Morning routine complete' : 'Evening routine complete',
             style: AppFonts.cormorant(
               size: 17,
               weight: FontWeight.w700,

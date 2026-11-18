@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 
-/// "YOUR STEPS" with the number of open steps on the right.
+/// "YOUR ACTIVITIES" with the number of open activities on the right.
 class StepsHeading extends StatelessWidget {
   const StepsHeading({
     super.key,
@@ -19,7 +19,7 @@ class StepsHeading extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'YOUR STEPS',
+          'YOUR ACTIVITIES',
           style: TextStyle(
             color: palette.text,
             fontSize: 10,
@@ -31,7 +31,7 @@ class StepsHeading extends StatelessWidget {
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
           child: Text(
-            '$remaining ${remaining == 1 ? 'step' : 'steps'} remaining',
+            '$remaining left',
             key: ValueKey(remaining),
             style: TextStyle(
               color: palette.muted,

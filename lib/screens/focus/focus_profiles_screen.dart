@@ -87,7 +87,7 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: rfmScaffoldAppBar(title: 'Focus Profiles'),
+      appBar: rfmScaffoldAppBar(title: 'Focus profiles'),
       body: Column(
         children: [
           Expanded(child: _buildList()),
@@ -99,7 +99,7 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _onCreatePressed,
-                  child: const Text('Create Profile'),
+                  child: const Text('Create profile'),
                 ),
               ),
             ),
@@ -115,7 +115,7 @@ class _FocusProfilesScreenState extends State<FocusProfilesScreen> {
     if (_profiles.isEmpty) {
       return Center(
         child: Text(
-          'No profiles yet.\nTap "Create Profile" to add one.',
+          'No profiles yet.\nTap "Create profile" to add one.',
           textAlign: TextAlign.center,
           style: AppFonts.manrope(size: 14, color: context.palette.muted),
         ),

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:app_blocker/app_blocker.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -249,6 +248,24 @@ class RoutineSessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// From the "No apps are blocked" hint: ask for permission (or apps)
+  /// again and block the period's apps for the rest of the routine.
+  Future<void> retryBlocking(BuildContext context) async {
+    final period = _period;
+    if (period == null || !isActive || _isBlocking) return;
+    // The plugin reads the end time when it blocks, so save it first.
+    _isBlocking = true;
+    await _save();
+    _isBlocking = false;
+    if (context.mounted) {
+      _isBlocking = await _startBlocking(context, period);
+    }
+    await _save();
+    _scheduleEnd();
+    await _updateAlerts();
+    notifyListeners();
+  }
+
   @visibleForTesting
   void resetForTest() {
     _endTimer?.cancel();
@@ -264,17 +281,16 @@ class RoutineSessionController extends ChangeNotifier {
     RoutinePeriod period,
   ) async {
     try {
+      // Nothing to block: don't ask for permission or start the plugin.
+      final profile = await _blocking.latestProfile(period.name);
+      if (profile == null || profile.appIdentifiers.isEmpty) return false;
+
+      if (!context.mounted) return false;
       if (!await _blocking.ensurePermission(context)) return false;
 
       // An old, finished focus session would otherwise unblock us later.
       final focus = SessionStore();
       if (await focus.hasExpired()) await focus.clear();
-
-      BlockProfile? profile;
-      for (final p in await AppBlocker.instance.getProfiles()) {
-        if (p.id == period.name) profile = p;
-      }
-      if (profile == null) return false;
 
       await _blocking.startBlocking(
         profile,

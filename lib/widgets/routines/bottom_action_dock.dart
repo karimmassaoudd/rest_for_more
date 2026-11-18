@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
-/// The big "Start your morning" / "Start evening" button at the bottom
+/// "Start morning routine" / "Start evening routine"
 /// of the routine screen; opens the guided routine flow.
 class BottomActionDock extends StatelessWidget {
   const BottomActionDock({
@@ -54,7 +54,9 @@ class BottomActionDock extends StatelessWidget {
             Text(
               isRunning
                   ? 'Continue routine'
-                  : (morning ? 'Start your morning' : 'Start evening'),
+                  : (morning
+                        ? 'Start morning routine'
+                        : 'Start evening routine'),
             ),
           ],
         ),

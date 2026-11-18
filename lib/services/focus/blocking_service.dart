@@ -10,6 +10,7 @@ import '../../widgets/focus/permission_dialog.dart';
 import 'always_available_apps_store.dart';
 import 'blocker_permissions.dart';
 import 'session_store.dart';
+import 'timer_notification_service.dart';
 
 /// Talks to the app_blocker plugin: asks for permission, and starts and
 /// stops blocking a profile's apps.
@@ -78,6 +79,25 @@ class BlockingService {
     return await _blocker.checkPermission() == BlockerPermissionStatus.granted;
   }
 
+  /// Asks for notifications: the time left in the notification shade and
+  /// the time's-up sound. Starting still works when the user says no.
+  Future<void> ensureNotifications(BuildContext context) async {
+    final alerts = TimerNotificationService.instance;
+    if (await alerts.hasPermission()) return;
+    if (!context.mounted) return;
+    final ok = await showPermissionDialog(
+      context,
+      icon: Icons.notifications_active_outlined,
+      title: 'Show your timer',
+      message:
+          'Rest For More shows the time left in your notifications and '
+          'lets you know when the time is up.',
+      allowLabel: 'Allow',
+      denyLabel: 'Not now',
+    );
+    if (ok) await alerts.requestPermission();
+  }
+
   /// Waits until the user comes back to the app from the settings screen
   /// (gives up after 5 minutes).
   Future<void> _waitUntilBack() {
@@ -95,6 +115,19 @@ class BlockingService {
     );
   }
 
+  /// The profile as it's saved now (e.g. right after its apps were edited),
+  /// or null if it can't be found.
+  Future<BlockProfile?> latestProfile(String id) async {
+    try {
+      for (final profile in await _blocker.getProfiles()) {
+        if (profile.id == id) return profile;
+      }
+    } catch (error) {
+      debugPrint('Loading profile $id failed: $error');
+    }
+    return null;
+  }
+
   /// Blocks the profile's apps, except the always-available ones.
   /// Routines pass their own block-screen texts.
   Future<void> startBlocking(
@@ -107,11 +140,13 @@ class BlockingService {
       timerLabel: timerLabel ?? 'Apps unlock in {timeLeft}',
     );
 
+    // The apps as saved now: they may have changed since the screen opened.
+    final current = await latestProfile(profile.id) ?? profile;
     final stored = await _alwaysAvailableStore.getAlwaysAvailableApps(
       profile.id,
     );
     final protectedApps = getHardAlwaysAvailableApps(stored.toSet());
-    final toBlock = profile.appIdentifiers
+    final toBlock = current.appIdentifiers
         .where((id) => !protectedApps.contains(id))
         .toList();
 
@@ -149,8 +184,8 @@ class BlockingService {
         subtitle: subtitle,
         timerLabel: timerLabel,
         backgroundColor: AppColors.darkBrown,
-        returnHomeButtonText: 'Return to Home',
-        emergencyButtonText: 'Emergency Unlock',
+        returnHomeButtonText: 'Return to home',
+        emergencyButtonText: 'Emergency unlock',
       ),
     );
   }

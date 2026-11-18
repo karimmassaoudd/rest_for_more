@@ -20,7 +20,7 @@ class EditAlwaysAvailableAppsScreen extends StatelessWidget {
     final store = AlwaysAvailableAppsStore();
 
     return AppSelectionScreen(
-      title: 'Edit Always Available Apps',
+      title: 'Edit always available apps',
       listName: 'always available apps',
       loadInitialSelection: () async {
         final alwaysAvailable = await store.getAlwaysAvailableApps(profile.id);

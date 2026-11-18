@@ -11,6 +11,8 @@ import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/focus/timer_dial.dart';
 import '../../widgets/focus/timer_primary_button.dart';
 import '../../widgets/routines/blocked_until_note.dart';
+import '../../widgets/focus/no_apps_dialog.dart';
+import '../../services/focus/blocking_service.dart';
 
 /// One routine activity at a time, in the same layout as the focus timer.
 ///
@@ -147,6 +149,17 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
   /// Starts (or continues) the step on screen, and blocking with it.
   Future<void> _startCurrentStep() async {
     if (!mounted || _isComplete || _isCurrentDone) return;
+    // Starting the routine with a profile that blocks nothing: say so first.
+    if (!_session.isRunningFor(widget.period)) {
+      final go = await confirmBlockedApps(
+        context,
+        widget.period.name,
+        sessionName: '${routineName(widget.period)} routine',
+      );
+      if (!go || !mounted) return;
+      await BlockingService().ensureNotifications(context);
+      if (!mounted) return;
+    }
     final result = await _session.startStep(
       context,
       period: widget.period,
@@ -343,7 +356,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
     if (_isComplete) {
       primary = TimerPrimaryButton(
         key: const Key('return-to-overview-button'),
-        label: 'Return to overview',
+        label: 'Back to routine',
         onPressed: () => Navigator.maybePop(context),
       );
     } else if (_isCurrentDone) {
@@ -362,7 +375,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
         final running = _isMine && !_session.isPaused;
         secondary = _textButton(
           key: const Key('routine-flow-pause-button'),
-          label: running ? 'Pause' : 'Resume',
+          label: running ? 'Pause' : (_isMine ? 'Resume' : 'Start'),
           onPressed: _togglePause,
           palette: palette,
         );

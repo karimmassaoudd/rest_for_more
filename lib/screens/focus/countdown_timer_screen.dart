@@ -13,6 +13,7 @@ import '../../widgets/common/confirm_dialog.dart';
 import '../../widgets/focus/duration_presets.dart';
 import '../../widgets/focus/timer_dial.dart';
 import '../../widgets/focus/timer_primary_button.dart';
+import '../../widgets/focus/no_apps_dialog.dart';
 import '../../services/routines/routine_session_controller.dart';
 
 /// Focus timer for one [profile].
@@ -113,8 +114,17 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
       return;
     }
 
+    final go = await confirmBlockedApps(
+      context,
+      widget.profile.id,
+      sessionName: '${widget.profile.name} session',
+    );
+    if (!go || !mounted) return;
+
     final granted = await _blocking.ensurePermission(context);
     if (!granted || !mounted) return;
+    await _blocking.ensureNotifications(context);
+    if (!mounted) return;
 
     final started = await _controller.start();
 

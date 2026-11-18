@@ -43,8 +43,8 @@ List<HomeCard> buildHomeCarouselCards({
       eyebrow: 'Ready to start the day?',
       title: 'Good morning, start the day by being productive.',
       buttonLabel: !morningRunning
-          ? 'View Morning Routine'
-          : (routineDone ? 'Morning Routine Done' : 'Continue Morning Routine'),
+          ? 'View morning routine'
+          : (routineDone ? 'Morning routine done' : 'Continue morning routine'),
       background: palette.card,
       textColor: palette.text,
       buttonColor: palette.highlight,
@@ -59,8 +59,8 @@ List<HomeCard> buildHomeCarouselCards({
       eyebrow: 'Ready to end the day?',
       title: 'Good evening, end the day on a good note.',
       buttonLabel: !eveningRunning
-          ? 'View Evening Routine'
-          : (routineDone ? 'Evening Routine Done' : 'Continue Evening Routine'),
+          ? 'View evening routine'
+          : (routineDone ? 'Evening routine done' : 'Continue evening routine'),
       background: palette.card,
       textColor: palette.text,
       buttonColor: palette.accent,
