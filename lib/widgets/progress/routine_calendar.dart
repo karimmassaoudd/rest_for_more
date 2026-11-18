@@ -1,110 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
-import '../../services/routines/routine_progress_storage.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
 
-class RoutineHistoryScreen extends StatefulWidget {
-  const RoutineHistoryScreen({
+/// Displays a month of saved routine completion data in the Progress tab.
+class RoutineCalendar extends StatelessWidget {
+  const RoutineCalendar({
     super.key,
-    this.storage = const RoutineProgressStorage(),
-  });
-  final RoutineProgressStorage storage;
-
-  @override
-  State<RoutineHistoryScreen> createState() => _RoutineHistoryScreenState();
-}
-
-class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
-  late Future<List<RoutineDayRecord>> _history;
-  late DateTime _month;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _month = DateTime(now.year, now.month);
-    _history = widget.storage.loadHistory();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = RoutinePalette.of(context);
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: AppBar(
-        title: Text(
-          'Progress',
-          style: AppFonts.cormorant(size: 28, weight: FontWeight.w600),
-        ),
-      ),
-      body: FutureBuilder<List<RoutineDayRecord>>(
-        future: _history,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(
-              child: CircularProgressIndicator(color: palette.accent),
-            );
-          }
-          final records = {for (final item in snapshot.data!) item.date: item};
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text(
-                'Your routine calendar',
-                style: AppFonts.cormorant(
-                  size: 30,
-                  weight: FontWeight.w600,
-                  color: palette.text,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _Calendar(
-                month: _month,
-                records: records,
-                palette: palette,
-                onMonth: (delta) => setState(
-                  () => _month = DateTime(_month.year, _month.month + delta),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Recent days',
-                style: AppFonts.montserrat(
-                  size: 11,
-                  weight: FontWeight.w800,
-                  color: palette.muted,
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (records.isEmpty)
-                Text(
-                  'No routine progress saved yet.',
-                  style: AppFonts.manrope(size: 14, color: palette.muted),
-                ),
-              ...records.values
-                  .toList()
-                  .reversed
-                  .take(14)
-                  .map(
-                    (record) => _RecordCard(record: record, palette: palette),
-                  ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _Calendar extends StatelessWidget {
-  const _Calendar({
     required this.month,
     required this.records,
     required this.palette,
     required this.onMonth,
   });
+
   final DateTime month;
   final Map<String, RoutineDayRecord> records;
   final RoutinePalette palette;
@@ -193,10 +102,17 @@ class _Calendar extends StatelessWidget {
   }
 }
 
-class _RecordCard extends StatelessWidget {
-  const _RecordCard({required this.record, required this.palette});
+/// Shows one saved day below the calendar in the Progress tab.
+class RoutineProgressRecordCard extends StatelessWidget {
+  const RoutineProgressRecordCard({
+    super.key,
+    required this.record,
+    required this.palette,
+  });
+
   final RoutineDayRecord record;
   final RoutinePalette palette;
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
@@ -219,7 +135,7 @@ class _RecordCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(
-            'Morning ${record.morningCompleted}/${record.morningTotal} · Evening ${record.eveningCompleted}/${record.eveningTotal}',
+            'Morning ${record.morningCompleted}/${record.morningTotal} Â· Evening ${record.eveningCompleted}/${record.eveningTotal}',
             style: AppFonts.manrope(size: 12, color: palette.muted),
           ),
         ],
