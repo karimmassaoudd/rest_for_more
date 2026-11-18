@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../models/focus/commonly_needed_apps.dart';
 import '../../models/focus/hard_always_available_apps.dart';
 import '../../services/focus/always_available_apps_store.dart';
-import 'app_selection_screen.dart'; // was '../../widgets/focus/app_selection_screen.dart'
+import 'app_selection_screen.dart';
 
 /// Pick which apps stay usable while this profile's session is running.
 ///

@@ -1,26 +1,26 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../../models/routines/default_routine_steps.dart';
 import '../../models/routines/routine_step.dart';
 import '../../services/routines/routine_progress_storage.dart';
+import '../../services/routines/routine_session_controller.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
 import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/routines/active_routine_card.dart';
+import '../../widgets/routines/blocked_until_note.dart';
 import '../../widgets/routines/bottom_action_dock.dart';
 import '../../widgets/routines/completion_banner.dart';
 import '../../widgets/routines/routine_item_card.dart';
 import '../../widgets/routines/steps_heading.dart';
 import 'routine_flow_screen.dart';
-import '../../services/routines/routine_session_controller.dart';
-import '../../widgets/routines/blocked_until_note.dart';
 import 'routine_history_debug_screen.dart';
 
 /// The morning or evening routine (view only): progress, the list of
-/// steps, and a button that opens the guided flow through the open steps.
+/// steps, and a button that opens the activity screen at the first open activity.
 ///
 /// The period comes from the route (/routine?period=morning|evening).
 /// Ticked-off steps are saved per period, so they survive a restart.
@@ -128,7 +128,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
 
   /// Saves this period's ticks and today's history record.
   Future<void> _saveProgress() async {
-    // Home shows "… Routine Done" when nothing is left.
+    // Home shows "Morning routine done" when nothing is left.
     RoutineSessionController.instance.reportStepsLeft(
       widget.period,
       _remaining,
@@ -196,9 +196,7 @@ class _RoutineScreenState extends State<RoutineScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _isMorning
-                ? 'Your morning routine is complete.'
-                : 'Your evening routine is complete.',
+            'Your ${routineName(widget.period).toLowerCase()} routine is complete.',
           ),
         ),
       );

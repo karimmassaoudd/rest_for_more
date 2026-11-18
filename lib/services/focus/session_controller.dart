@@ -167,7 +167,6 @@ class SessionController extends ChangeNotifier {
 
   /// Starts the session. Permission must already be granted.
   /// Returns false if it could not start (everything is undone then).
-  // Future<bool> start() async {
   Future<bool> start() async {
     if (remainingMillis <= 0) return false;
     if (_starting) return false;

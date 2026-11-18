@@ -2,9 +2,9 @@ import 'package:app_blocker/app_blocker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../services/focus/installed_apps_service.dart'; // unchanged
-import '../../widgets/focus/app_search_field.dart'; // was 'app_search_field.dart'
-import '../../widgets/focus/suggested_apps_button.dart'; // was 'suggested_apps_button.dart'
+import '../../services/focus/installed_apps_service.dart';
+import '../../widgets/focus/app_search_field.dart';
+import '../../widgets/focus/suggested_apps_button.dart';
 import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/focus/timer_primary_button.dart';
 
@@ -163,57 +163,64 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     // Filtered once per build, not once per row.
     final apps = _filteredApps;
 
-    return Scaffold(
-      appBar: rfmScaffoldAppBar(title: widget.title),
-      // Save at the bottom, like "Create Profile".
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: TimerPrimaryButton(
-            key: const Key('app-selection-save-button'),
-            label: _saving ? 'Saving...' : 'Save',
-            onPressed: _saving ? null : _save,
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          AppSearchField(
-            onSearchQueryChanged: (query) =>
-                setState(() => _searchQuery = query),
-          ),
-          SuggestedAppsButton(
-            installedPackageNames: _installedPackageNames,
-            suggestedPackageNames: widget.suggestedPackageNames,
-            onSuggestionsSelected: _addSuggestions,
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: apps.length,
-              itemBuilder: (context, index) {
-                final app = apps[index];
-                final isLocked = widget.lockedPackageNames.contains(
-                  app.packageName,
-                );
-                return CheckboxListTile(
-                  title: Text(app.appName),
-                  subtitle: isLocked && widget.lockedReason != null
-                      ? Text(widget.lockedReason!)
-                      : null,
-                  secondary: app.icon != null
-                      ? Image.memory(app.icon!, width: 32, height: 32)
-                      : const Icon(Icons.apps),
-                  value: _selectedApps.contains(app.packageName),
-                  // A null onChanged shows the checkbox as disabled.
-                  onChanged: isLocked
-                      ? null
-                      : (value) =>
-                            _toggleSelection(app.packageName, value ?? false),
-                );
-              },
+    // Hide the "Don't forget to save" toast when this screen closes
+    // (Save, the toast's Save, or back).
+    return PopScope(
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      },
+      child: Scaffold(
+        appBar: rfmScaffoldAppBar(title: widget.title),
+        // Save at the bottom, like "Create Profile".
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+            child: TimerPrimaryButton(
+              key: const Key('app-selection-save-button'),
+              label: _saving ? 'Saving...' : 'Save',
+              onPressed: _saving ? null : _save,
             ),
           ),
-        ],
+        ),
+        body: Column(
+          children: [
+            AppSearchField(
+              onSearchQueryChanged: (query) =>
+                  setState(() => _searchQuery = query),
+            ),
+            SuggestedAppsButton(
+              installedPackageNames: _installedPackageNames,
+              suggestedPackageNames: widget.suggestedPackageNames,
+              onSuggestionsSelected: _addSuggestions,
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: apps.length,
+                itemBuilder: (context, index) {
+                  final app = apps[index];
+                  final isLocked = widget.lockedPackageNames.contains(
+                    app.packageName,
+                  );
+                  return CheckboxListTile(
+                    title: Text(app.appName),
+                    subtitle: isLocked && widget.lockedReason != null
+                        ? Text(widget.lockedReason!)
+                        : null,
+                    secondary: app.icon != null
+                        ? Image.memory(app.icon!, width: 32, height: 32)
+                        : const Icon(Icons.apps),
+                    value: _selectedApps.contains(app.packageName),
+                    // A null onChanged shows the checkbox as disabled.
+                    onChanged: isLocked
+                        ? null
+                        : (value) =>
+                              _toggleSelection(app.packageName, value ?? false),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

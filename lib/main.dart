@@ -8,9 +8,9 @@ import 'services/focus/focus_notification_navigation.dart';
 import 'services/focus/profile_bootstrap.dart';
 import 'services/focus/timer_notification_service.dart';
 import 'services/onboarding/welcome_choice_store.dart';
+import 'services/routines/routine_session_controller.dart';
 import 'services/settings/locale_controller.dart';
 import 'services/settings/theme_controller.dart';
-import 'services/routines/routine_session_controller.dart';
 import 'theme/app_theme.dart';
 
 /// App entry point.

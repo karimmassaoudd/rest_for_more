@@ -16,6 +16,9 @@ enum RoutineStartResult { started, focusRunning, otherRoutineRunning }
 String routineName(RoutinePeriod period) =>
     period == RoutinePeriod.morning ? 'Morning' : 'Evening';
 
+/// "Morning routine" / "Evening routine".
+String routineTitle(RoutinePeriod period) => '${routineName(period)} routine';
+
 /// The running morning or evening routine. App-wide, not owned by a screen,
 /// so leaving the activity screen doesn't stop the timer or the blocking.
 ///
@@ -164,15 +167,7 @@ class RoutineSessionController extends ChangeNotifier {
 
     if (!_isBlocking && !_triedBlocking) {
       _triedBlocking = true;
-      if (context.mounted) {
-        // The plugin reads the end time when it blocks, so save it first.
-        _isBlocking = true;
-        await _save();
-        _isBlocking = false;
-        if (context.mounted) {
-          _isBlocking = await _startBlocking(context, period);
-        }
-      }
+      if (context.mounted) await _tryBlocking(context, period);
     } else if (_isBlocking) {
       await _updateBlockScreen(); // the "until" time may have moved
     }
@@ -253,13 +248,7 @@ class RoutineSessionController extends ChangeNotifier {
   Future<void> retryBlocking(BuildContext context) async {
     final period = _period;
     if (period == null || !isActive || _isBlocking) return;
-    // The plugin reads the end time when it blocks, so save it first.
-    _isBlocking = true;
-    await _save();
-    _isBlocking = false;
-    if (context.mounted) {
-      _isBlocking = await _startBlocking(context, period);
-    }
+    if (context.mounted) await _tryBlocking(context, period);
     await _save();
     _scheduleEnd();
     await _updateAlerts();
@@ -275,6 +264,15 @@ class RoutineSessionController extends ChangeNotifier {
   // ------------------------------------------------------------------
   // Blocking
   // ------------------------------------------------------------------
+
+  /// Tries to block the period's apps; [_isBlocking] tells if it worked.
+  Future<void> _tryBlocking(BuildContext context, RoutinePeriod period) async {
+    // The plugin reads the end time when it blocks, so save it first.
+    _isBlocking = true;
+    await _save();
+    _isBlocking = false;
+    if (context.mounted) _isBlocking = await _startBlocking(context, period);
+  }
 
   Future<bool> _startBlocking(
     BuildContext context,
@@ -295,7 +293,6 @@ class RoutineSessionController extends ChangeNotifier {
       await _blocking.startBlocking(
         profile,
         subtitle: _blockScreenText(period),
-        timerLabel: 'Apps unlock in {timeLeft}',
       );
       return true;
     } catch (error) {
@@ -308,10 +305,7 @@ class RoutineSessionController extends ChangeNotifier {
     final period = _period;
     if (period == null) return;
     try {
-      await _blocking.updateBlockScreen(
-        subtitle: _blockScreenText(period),
-        timerLabel: 'Apps unlock in {timeLeft}',
-      );
+      await _blocking.updateBlockScreen(subtitle: _blockScreenText(period));
     } catch (error) {
       debugPrint('Updating the block screen failed: $error');
     }
@@ -362,7 +356,7 @@ class RoutineSessionController extends ChangeNotifier {
       await _alerts.cancelRoutine();
       return;
     }
-    final title = '${routineName(period)} routine';
+    final title = routineTitle(period);
     final step = _activeStep;
     final stepRunning = step != null && !isPaused && _stepEndAt > _now;
 
@@ -417,10 +411,10 @@ class RoutineSessionController extends ChangeNotifier {
     return '$h:$m ${time.hour < 12 ? 'AM' : 'PM'}';
   }
 
-  /// Block screen subtitle. The plugin shows "{timeLeft} remaining" itself,
-  /// from the routineBlockedUntilMillis we save.
+  /// Block screen subtitle. Under it the plugin shows "Apps unlock in …",
+  /// counting down to the routineBlockedUntilMillis we save.
   String _blockScreenText(RoutinePeriod period) =>
-      '${routineName(period)} routine in progress';
+      '${routineTitle(period)} in progress';
 
   void _clearState() {
     _period = null;
@@ -446,10 +440,7 @@ class RoutineSessionController extends ChangeNotifier {
       }
       if (_isBlocking) {
         await prefs.setInt(_pluginEndKey, _blockedUntil);
-        await prefs.setString(
-          _pluginNameKey,
-          '${routineName(_period!)} routine',
-        );
+        await prefs.setString(_pluginNameKey, routineTitle(_period!));
       } else {
         await prefs.remove(_pluginEndKey);
         await prefs.remove(_pluginNameKey);
@@ -483,10 +474,7 @@ class RoutineSessionController extends ChangeNotifier {
         return;
       }
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      _period = null;
-      for (final p in RoutinePeriod.values) {
-        if (p.name == json['period']) _period = p;
-      }
+      _period = RoutinePeriod.values.asNameMap()[json['period']];
       _blockedUntil = json['blockedUntil'] as int? ?? 0;
       _isBlocking = json['blocking'] as bool? ?? false;
       _activeStep = json['step'] as String?;

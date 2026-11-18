@@ -3,14 +3,14 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/routines/routine_step.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/focus/blocking_service.dart';
 import '../../services/focus/profile_events.dart';
 import '../../services/focus/session_store.dart';
 import '../../services/focus/timer_notification_service.dart';
-import '../../theme/app_fonts.dart';
-import '../../models/routines/routine_step.dart';
 import '../../services/routines/routine_session_controller.dart';
+import '../../theme/app_fonts.dart';
 import '../../widgets/focus/permission_banner.dart';
 import '../../widgets/home/focus_profile_tile.dart';
 import '../../widgets/home/home_carousel.dart';
@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// "View …" / "… Done" open the routine; "Continue …" goes straight to the running step, like the notification.
+  /// "View …" and "… routine done" open the routine; "Continue …" goes straight to the running activity, like the notification.
   void _openRoutine(RoutinePeriod period, RoutinePeriod? running, bool done) {
     final continueIt = running == period && !done;
     context.push(

@@ -1,5 +1,4 @@
-/// Which routine a step belongs to; also decides the light (morning)
-/// or dark (evening) colours.
+/// Which routine: morning or evening.
 enum RoutinePeriod { morning, evening }
 
 /// One step of the morning or evening routine on the routine screen.

@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../models/routines/routine_time.dart';
+import '../../services/focus/blocking_service.dart';
 import '../../services/routines/routine_session_controller.dart';
 import '../../theme/app_fonts.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/common/rfm_app_bar.dart';
+import '../../widgets/focus/no_apps_dialog.dart';
 import '../../widgets/focus/timer_dial.dart';
 import '../../widgets/focus/timer_primary_button.dart';
 import '../../widgets/routines/blocked_until_note.dart';
-import '../../widgets/focus/no_apps_dialog.dart';
-import '../../services/focus/blocking_service.dart';
 
 /// One routine activity at a time, in the same layout as the focus timer.
 ///
@@ -154,7 +154,7 @@ class _RoutineFlowScreenState extends State<RoutineFlowScreen> {
       final go = await confirmBlockedApps(
         context,
         widget.period.name,
-        sessionName: '${routineName(widget.period)} routine',
+        sessionName: routineTitle(widget.period),
       );
       if (!go || !mounted) return;
       await BlockingService().ensureNotifications(context);

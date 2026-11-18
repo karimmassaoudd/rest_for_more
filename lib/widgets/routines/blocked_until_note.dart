@@ -19,7 +19,7 @@ class BlockedUntilNote extends StatelessWidget {
     final go = await confirmBlockedApps(
       context,
       period.name,
-      sessionName: '${routineName(period)} routine',
+      sessionName: routineTitle(period),
     );
     if (!go || !context.mounted) return;
     await RoutineSessionController.instance.retryBlocking(context);

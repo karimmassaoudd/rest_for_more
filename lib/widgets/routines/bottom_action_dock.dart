@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
-/// "Start morning routine" / "Start evening routine"
-/// of the routine screen; opens the guided routine flow.
+/// "Start morning routine" / "Start evening routine", or "Continue routine" while it runs. Opens the activity screen.
 class BottomActionDock extends StatelessWidget {
   const BottomActionDock({
     super.key,
