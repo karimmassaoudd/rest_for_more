@@ -4,12 +4,13 @@ import 'package:flutter/semantics.dart';
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
-/// One step in the routine list: time, a round to-do circle with an icon
-/// picked from the title, name and duration.
+/// One activity in the routine list: time, an icon picked from the title,
+/// name and duration, and a to-do circle on the right.
 ///
-/// Tap opens the step. Swipe right ticks it off, or unticks it when it's
-/// already done. When done, the icon stays: the circle gets an accent ring
-/// and a small ✓ badge.
+/// Tap opens the activity. Tapping the circle or swiping either way ticks
+/// it off, or unticks it
+/// when it's already done. Done: muted icon, strikethrough title and a
+/// filled ✓ on the right.
 class RoutineItemCard extends StatelessWidget {
   const RoutineItemCard({
     super.key,
@@ -131,14 +132,14 @@ class RoutineItemCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    _StepIcon(
+                    // A plain icon, like the profile tiles on Home.
+                    Icon(
+                      _iconForStep(),
                       key: Key('routine-step-icon-$index'),
-                      icon: _iconForStep(),
-                      completed: completed,
-                      active: isActive,
-                      palette: palette,
+                      size: 26,
+                      color: completed ? palette.muted : palette.accent,
                     ),
-                    const SizedBox(width: 11),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,6 +168,17 @@ class RoutineItemCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 4),
+
+                    /// The to-do circle on the right (inside a button): empty while open,
+                    /// a filled ✓ when done.
+                    IconButton(
+                      key: Key('routine-step-done-$index'),
+                      onPressed: onToggle,
+                      tooltip: completed ? 'Mark as not done' : 'Mark as done',
+                      visualDensity: VisualDensity.compact,
+                      icon: _DoneMark(completed: completed, palette: palette),
+                    ),
                   ],
                 ),
               ),
@@ -178,71 +190,32 @@ class RoutineItemCard extends StatelessWidget {
   }
 }
 
-/// The round to-do circle: the step's icon always stays visible.
-/// Done: accent ring + a small ✓ badge in the corner.
-class _StepIcon extends StatelessWidget {
-  const _StepIcon({
-    super.key,
-    required this.icon,
-    required this.completed,
-    required this.active,
-    required this.palette,
-  });
+/// The to-do circle on the right: empty while open, a filled ✓ when done.
+class _DoneMark extends StatelessWidget {
+  const _DoneMark({required this.completed, required this.palette});
 
-  final IconData icon;
   final bool completed;
-  final bool active;
   final RoutinePalette palette;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 33,
-      height: 33,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: completed ? palette.accentSoft : palette.surface,
-              border: Border.all(
-                color: completed || active
-                    ? palette.accent
-                    : palette.border.withValues(alpha: 0.5),
-                width: completed ? 1.6 : 1.2,
-              ),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) =>
+          ScaleTransition(scale: animation, child: child),
+      child: completed
+          ? Icon(
+              Icons.check_circle_rounded,
+              key: const ValueKey('done'),
+              size: 24,
+              color: palette.accent,
+            )
+          : Icon(
+              Icons.radio_button_unchecked_rounded,
+              key: const ValueKey('open'),
+              size: 24,
+              color: palette.border,
             ),
-            child: Icon(
-              icon,
-              size: 15,
-              color: completed ? palette.accent : palette.muted,
-            ),
-          ),
-          if (completed)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: palette.accent,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: palette.background, width: 1.5),
-                ),
-                child: Icon(
-                  Icons.check_rounded,
-                  size: 9,
-                  color: palette.buttonText,
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }
