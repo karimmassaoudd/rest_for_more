@@ -23,9 +23,12 @@ Future<bool> confirmBlockedApps(
     builder: (context) => AlertDialog(
       icon: const Icon(Icons.block_rounded),
       title: const Text('No apps blocked yet'),
+      // Like the "Show your timer" dialog: centered text, buttons side by
+      // side, the main choice (filled) on the right.
       content: Text(
         "Your $sessionName doesn't block any apps yet, so nothing will be "
         'blocked. Choose the apps you want to put away first?',
+        textAlign: TextAlign.center,
       ),
       actionsAlignment: MainAxisAlignment.center,
       actions: [
@@ -36,6 +39,11 @@ Future<bool> confirmBlockedApps(
         ),
         ElevatedButton(
           key: const Key('no-apps-choose'),
+          // Compact, so it fits next to "Start anyway".
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+          ),
           onPressed: () => Navigator.of(context).pop(_NoAppsChoice.chooseApps),
           child: const Text('Choose apps'),
         ),

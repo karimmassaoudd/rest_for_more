@@ -74,6 +74,11 @@ class _MyAppState extends State<MyApp> {
       openRoutine: _openActiveRoutine,
     );
 
+    // Started by tapping the countdown notification: open what it shows.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => TimerNotificationService.instance.reportLaunchTap(),
+    );
+
     _lifecycle = AppLifecycleListener(
       onResume: () => TimerNotificationService.instance.stopFocusAlarmIfOver(),
     );

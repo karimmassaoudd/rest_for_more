@@ -3,10 +3,10 @@ import 'dart:math';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:live_activity_kit/live_activity_kit.dart';
 
-import '../../theme/app_colors.dart';
 import '../../theme/app_palette.dart';
 import 'focus_notification_navigation.dart';
 import 'session_store.dart';
@@ -23,7 +23,12 @@ class TimerNotificationService {
   static const _activityId = 'focus-timer';
   static const _alarmId = 1;
   static const _breakAlarmId = 2;
-  static const _countdownNotificationId = 100;
+
+  /// Our own Android countdown notification with a big timer (MainActivity.kt).
+  static const _androidCountdown = MethodChannel(
+    'rest_for_more/countdown_notification',
+  );
+
   static const _routineStepAlarmId = 3;
   static const _routineEndAlarmId = 4;
 
@@ -36,6 +41,13 @@ class TimerNotificationService {
   /// Call once in main().
   Future<void> init() async {
     try {
+      // Taps on our Android countdown notification.
+      _androidCountdown.setMethodCallHandler((call) async {
+        final link = call.arguments;
+        if (call.method == 'tapped' && link is String) {
+          FocusNotificationNavigation.reportTap(link);
+        }
+      });
       await Alarm.init();
       await _notifications.initialize(
         const InitializationSettings(
@@ -49,6 +61,20 @@ class TimerNotificationService {
       );
     } catch (error) {
       debugPrint('Notification setup failed: $error');
+    }
+  }
+
+  /// Android: if the app was started by tapping the countdown notification,
+  /// opens what it shows (the timer or the routine). Call once the app runs.
+  Future<void> reportLaunchTap() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final link = await _androidCountdown.invokeMethod<String>(
+        'takeLaunchLink',
+      );
+      if (link != null) FocusNotificationNavigation.reportTap(link);
+    } catch (error) {
+      debugPrint('Reading the notification tap failed: $error');
     }
   }
 
@@ -424,10 +450,10 @@ class TimerNotificationService {
     }
   }
 
-  /// Android: a standard ongoing notification with the system countdown
-  /// (chronometer) in its top line. The system draws it, so it follows the
-  /// phone's light/dark mode and fits both the collapsed and the expanded
-  /// notification. It removes itself 1 s after the end; the alarm takes over.
+  /// Android: our own notification layout (MainActivity.kt) with a big
+  /// system countdown: next to the text when collapsed, under it when
+  /// expanded. System text styles, so it follows light/dark mode. It
+  /// removes itself 1 s after the end; the alarm takes over.
   Future<void> _showAndroidCountdown({
     required DateTime until,
     required String title,
@@ -435,35 +461,14 @@ class TimerNotificationService {
     required String link,
     bool showTimer = true,
   }) async {
-    final remaining = until.difference(DateTime.now()).inMilliseconds;
     try {
-      await _notifications.show(
-        _countdownNotificationId,
-        title,
-        subtitle,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'focus_countdown',
-            'Focus countdown',
-            channelDescription:
-                'Shows the time left in a focus session or break.',
-            importance: Importance.low,
-            priority: Priority.low,
-            ongoing: true,
-            autoCancel: false,
-            onlyAlertOnce: true,
-            silent: true,
-            showWhen: showTimer,
-            when: showTimer ? until.millisecondsSinceEpoch : null,
-            usesChronometer: showTimer,
-            chronometerCountDown: showTimer,
-            timeoutAfter: max(1000, remaining + 1000),
-            color: AppColors.lightBrown,
-            visibility: NotificationVisibility.public,
-          ),
-        ),
-        payload: link,
-      );
+      await _androidCountdown.invokeMethod<void>('show', {
+        'title': title,
+        'subtitle': subtitle,
+        'endAtMillis': until.millisecondsSinceEpoch,
+        'showTimer': showTimer,
+        'link': link,
+      });
     } catch (error) {
       debugPrint('Unable to show focus notification: $error');
     }
@@ -473,7 +478,7 @@ class TimerNotificationService {
   Future<void> _removeCountdown() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
       try {
-        await _notifications.cancel(_countdownNotificationId);
+        await _androidCountdown.invokeMethod<void>('cancel');
       } catch (error) {
         debugPrint('Unable to remove focus notification: $error');
       }
