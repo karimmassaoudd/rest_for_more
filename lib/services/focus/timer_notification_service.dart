@@ -202,9 +202,8 @@ class TimerNotificationService {
             stopButton: 'OK',
             keepNotificationAfterAlarmEnds: false,
           ),
-          volumeSettings: VolumeSettings.fade(
+          volumeSettings: VolumeSettings.fixed(
             volume: volume,
-            fadeDuration: Duration.zero,
             volumeEnforced: false,
           ),
         ),
@@ -252,9 +251,8 @@ class TimerNotificationService {
             stopButton: 'Stop',
             keepNotificationAfterAlarmEnds: false,
           ),
-          volumeSettings: VolumeSettings.fade(
+          volumeSettings: VolumeSettings.fixed(
             volume: 1.0,
-            fadeDuration: Duration.zero,
             volumeEnforced: false,
           ),
         ),
@@ -297,9 +295,8 @@ class TimerNotificationService {
             stopButton: 'OK',
             keepNotificationAfterAlarmEnds: false,
           ),
-          volumeSettings: VolumeSettings.fade(
+          volumeSettings: VolumeSettings.fixed(
             volume: 0.6,
-            fadeDuration: Duration.zero,
             volumeEnforced: false,
           ),
         ),
