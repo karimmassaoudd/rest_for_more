@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../services/focus/installed_apps_service.dart'; // unchanged
 import '../../widgets/focus/app_search_field.dart'; // was 'app_search_field.dart'
 import '../../widgets/focus/suggested_apps_button.dart'; // was 'suggested_apps_button.dart'
+import '../../widgets/common/rfm_app_bar.dart';
+import '../../widgets/focus/timer_primary_button.dart';
 
 /// Shared screen for picking apps from a searchable list of installed apps.
 ///
@@ -20,10 +22,15 @@ class AppSelectionScreen extends StatefulWidget {
     required this.validateToggle,
     required this.lockedPackageNames,
     required this.onSave,
+    required this.listName,
     this.lockedReason,
   });
 
   final String title;
+
+  /// What the selection is called in messages: "blocked apps" or
+  /// "always available apps" ("3 apps added to your blocked apps").
+  final String listName;
 
   /// Package names that are ticked when the screen opens.
   final Future<Set<String>> Function() loadInitialSelection;
@@ -118,13 +125,37 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     });
   }
 
-  /// Ticks the suggested apps, skipping any that aren't allowed.
+  /// Ticks the suggested apps, skipping any that aren't allowed, and says
+  /// how many were added (they're only kept after Save).
   void _addSuggestions(Set<String> suggested) {
-    setState(() {
-      _selectedApps.addAll(
-        suggested.where((id) => widget.validateToggle(id, true) == null),
+    final toAdd = suggested
+        .where((id) => !_selectedApps.contains(id))
+        .where((id) => widget.validateToggle(id, true) == null)
+        .toSet();
+    setState(() => _selectedApps.addAll(toAdd));
+
+    final count = toAdd.length;
+    final String message;
+    if (suggested.isEmpty) {
+      message = 'None of the suggested apps are installed on this phone.';
+    } else if (count == 0) {
+      message = 'All suggested apps are already in your ${widget.listName}.';
+    } else {
+      message =
+          '$count ${count == 1 ? 'app' : 'apps'} added to your '
+          "${widget.listName}. Don't forget to save.";
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          action: count == 0
+              ? null
+              : SnackBarAction(label: 'Save', onPressed: _save),
+        ),
       );
-    });
   }
 
   @override
@@ -133,14 +164,17 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
     final apps = _filteredApps;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
+      appBar: rfmScaffoldAppBar(title: widget.title),
+      // Save at the bottom, like "Create Profile".
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          child: TimerPrimaryButton(
+            key: const Key('app-selection-save-button'),
+            label: _saving ? 'Saving...' : 'Save',
             onPressed: _saving ? null : _save,
           ),
-        ],
+        ),
       ),
       body: Column(
         children: [

@@ -52,6 +52,7 @@ class _EditBlockedAppsScreenState extends State<EditBlockedAppsScreen> {
     }
     return AppSelectionScreen(
       title: 'Edit Blocked Apps',
+      listName: 'blocked apps',
       loadInitialSelection: () async => widget.profile.appIdentifiers.toSet(),
       suggestedPackageNames: commonlyDistractingApps,
       validateToggle: (packageName, wantsSelected) {
