@@ -65,4 +65,8 @@ void main() {
     expect(record.morningCompleted, 2);
     expect(record.morningSteps, isEmpty);
   });
+
+  test('03:59 still belongs to the day before', () {
+    expect(storage.progressDay(DateTime(2026, 11, 16, 3, 59)), '2026-11-15');
+  });
 }

@@ -96,4 +96,14 @@ void main() {
     await pumpMorning(tester);
     expect(find.text('1/5'), findsOneWidget);
   });
+
+  testWidgets('tapping the circle ticks a step', (tester) async {
+    await pumpMorning(tester);
+    final circle = find.byKey(const Key('routine-step-done-3'));
+    await tester.ensureVisible(circle);
+    await tester.tap(circle);
+    await tester.pumpAndSettle();
+    expect(find.text('1/5'), findsOneWidget);
+    expect(find.widgetWithText(SnackBarAction, 'Undo'), findsOneWidget);
+  });
 }

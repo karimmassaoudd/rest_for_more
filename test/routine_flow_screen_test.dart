@@ -98,4 +98,31 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('a done activity can be marked as not done', (tester) async {
+    final reopened = <int>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: RoutineFlowScreen(
+          period: RoutinePeriod.morning,
+          steps: [steps.first.copyWith(isCompleted: true), steps.last],
+          initialIndex: 0,
+          onStepCompleted: (_) async {},
+          onStepReopened: (index) async => reopened.add(index),
+        ),
+      ),
+    );
+    expect(find.text('First activity'), findsOneWidget);
+    expect(find.byKey(const Key('routine-flow-done')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reopen-routine-step-button')));
+    await tester.pump();
+
+    expect(reopened, [0]);
+    expect(
+      find.byKey(const Key('complete-routine-step-button')),
+      findsOneWidget,
+    );
+  });
 }
