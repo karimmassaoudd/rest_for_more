@@ -35,6 +35,8 @@ Future<void> main() async {
   AuthService.instance.start();
 
   await TimerNotificationService.instance.init();
+  // Opening the app stops a ringing end-of-session alarm.
+  await TimerNotificationService.instance.stopFocusAlarmIfOver();
   await ensureCoreProfiles();
   // Continue a running routine, or unblock if its time is over.
   await RoutineSessionController.instance.restore();
@@ -45,9 +47,9 @@ Future<void> main() async {
 
 /// Root widget.
 ///
-/// Rebuilds MaterialApp when the language or theme changes, and opens
-/// the countdown screen when the user taps the running-timer
-/// notification.
+/// Rebuilds MaterialApp when the language or theme changes, opens the
+/// countdown screen when the user taps the running-timer notification,
+/// and stops a ringing end-of-session alarm when the app is opened.
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -61,6 +63,9 @@ class _MyAppState extends State<MyApp> {
     ThemeController.instance,
   ]);
 
+  /// Coming back to the app also stops a ringing alarm.
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
@@ -68,11 +73,16 @@ class _MyAppState extends State<MyApp> {
       openTimer: _openActiveTimer,
       openRoutine: _openActiveRoutine,
     );
+
+    _lifecycle = AppLifecycleListener(
+      onResume: () => TimerNotificationService.instance.stopFocusAlarmIfOver(),
+    );
   }
 
   @override
   void dispose() {
     FocusNotificationNavigation.instance.stop();
+    _lifecycle.dispose();
     super.dispose();
   }
 

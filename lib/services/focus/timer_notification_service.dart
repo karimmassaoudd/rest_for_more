@@ -9,6 +9,7 @@ import 'package:live_activity_kit/live_activity_kit.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_palette.dart';
 import 'focus_notification_navigation.dart';
+import 'session_store.dart';
 
 /// Alarm at the end of a session and the ongoing countdown in the
 /// notification shade (Android) or Live Activity (iOS).
@@ -25,6 +26,10 @@ class TimerNotificationService {
   static const _countdownNotificationId = 100;
   static const _routineStepAlarmId = 3;
   static const _routineEndAlarmId = 4;
+
+  // Our own sounds (assets/sounds/), instead of the phone's alarm sound.
+  static const _sessionEndSound = 'assets/sounds/session_end.mp3';
+  static const _chimeSound = 'assets/sounds/session_end.mp3';
 
   final _notifications = FlutterLocalNotificationsPlugin();
 
@@ -190,6 +195,7 @@ class TimerNotificationService {
         alarmSettings: AlarmSettings(
           id: id,
           dateTime: at,
+          assetAudioPath: _chimeSound,
           loopAudio: false,
           vibrate: true,
           androidAlarmClock: true,
@@ -230,7 +236,21 @@ class TimerNotificationService {
     }
   }
 
-  /// Loud, looping alarm with a full-screen notification when the session ends.
+  /// The app was opened: if the focus session is over, stop its alarm in
+  /// case it's still ringing. A running session's alarm stays scheduled,
+  /// and a routine's notification is left alone.
+  Future<void> stopFocusAlarmIfOver() async {
+    try {
+      if (await SessionStore().isActive()) return;
+    } catch (_) {
+      // Can't tell: stop anyway, a ringing alarm is worse.
+    }
+    await _stopAlarm();
+    await _stopBreakAlarm();
+  }
+
+  /// Loud, looping alarm when the session ends. Stopped from its
+  /// notification, or by opening the app (see main.dart).
   Future<void> _scheduleAlarm(DateTime endAt, String profileName) async {
     if (!endAt.isAfter(DateTime.now())) return;
     try {
@@ -239,10 +259,12 @@ class TimerNotificationService {
         alarmSettings: AlarmSettings(
           id: _alarmId,
           dateTime: endAt,
+          assetAudioPath: _sessionEndSound,
           loopAudio: true,
           vibrate: true,
           androidAlarmClock: true,
-          androidFullScreenIntent: true,
+          // Don't open the app by itself: opening it stops the alarm.
+          androidFullScreenIntent: false,
           androidStopAlarmOnTermination: false,
           warningNotificationOnKill: true,
           notificationSettings: NotificationSettings(
@@ -283,6 +305,7 @@ class TimerNotificationService {
         alarmSettings: AlarmSettings(
           id: _breakAlarmId,
           dateTime: breakEnd,
+          assetAudioPath: _chimeSound,
           loopAudio: false,
           vibrate: true,
           androidAlarmClock: true,
