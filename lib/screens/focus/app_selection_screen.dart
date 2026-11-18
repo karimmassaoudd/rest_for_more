@@ -151,6 +151,7 @@ class _AppSelectionScreenState extends State<AppSelectionScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(message),
+          persist: false,
           action: count == 0
               ? null
               : SnackBarAction(label: 'Save', onPressed: _save),

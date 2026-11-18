@@ -165,6 +165,9 @@ class _RoutineScreenState extends State<RoutineScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text('${step.title} done'),
+          // Has an action, so Flutter would keep it open until tapped.
+          persist: false,
+          duration: const Duration(seconds: 4),
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () {
