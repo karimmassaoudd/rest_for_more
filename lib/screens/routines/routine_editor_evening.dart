@@ -21,6 +21,7 @@ const _sleepActivityName = 'Slapen';
 ///
 /// Bedtime and activity changes are persisted when the user saves.
 class EveningPage extends StatefulWidget {
+  /// Creates the evening routine editor page.
   const EveningPage({
     super.key,
     this.activitiesStorage = const SaveActivities(),
