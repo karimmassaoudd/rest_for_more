@@ -10,7 +10,7 @@ import '../../theme/app_palette.dart';
 
 import '../../widgets/routines/activity_sheet.dart';
 import '../../widgets/routines/activity_tile.dart';
-import '../../widgets/routines/sleep_time_card.dart';
+import '../../widgets/routines/rise_time_card.dart';
 
 /// Name of the bedtime activity; it always follows the chosen bedtime
 /// and is always shown last. Must match default_evening_activities.dart.
@@ -36,7 +36,7 @@ class MorningPage extends StatefulWidget {
 
 class _MorningPageState extends State<MorningPage> {
   late List<Activity> _activities;
-  String _sleepTime = defaultRoutineSleepTime;
+  String _riseTime = defaultRoutineSleepTime; //this time comes from the savefile/database
   bool _isSaving = false;
 
   @override
@@ -60,7 +60,7 @@ class _MorningPageState extends State<MorningPage> {
   }
 
   // ------------------------------------------------------------------
-  // Bedtime
+  // Time of getting up
   // ------------------------------------------------------------------
 
   Future<void> _loadRoutine() async {
@@ -71,22 +71,22 @@ class _MorningPageState extends State<MorningPage> {
       ]);
       if (!mounted) return;
       setState(() {
-        _sleepTime = result[0] as String;
+        _riseTime = result[0] as String;
         _activities = result[1] as List<Activity>;
         _updateSleepActivityTime();
       });
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bedtijd laden is mislukt: $error')),
+        SnackBar(content: Text('opstaan tijd laden is mislukt: $error')),
       );
     }
   }
 
-  Future<void> _chooseSleepTime() async {
+  Future<void> _chooseRiseTime() async {
     final time = await showTimePicker(
       context: context,
-      initialTime: parseTime24h(_sleepTime),
+      initialTime: parseTime24h(_riseTime),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
@@ -94,7 +94,7 @@ class _MorningPageState extends State<MorningPage> {
     );
     if (time == null || !mounted) return;
     setState(() {
-      _sleepTime = formatTime24h(time);
+      _riseTime = formatTime24h(time);
       _updateSleepActivityTime();
     });
   }
@@ -103,7 +103,7 @@ class _MorningPageState extends State<MorningPage> {
   void _updateSleepActivityTime() {
     for (final activity in _activities) {
       if (activity.name == _sleepActivityName) {
-        activity.time = _sleepTime;
+        activity.time = _riseTime;
         return;
       }
     }
@@ -112,7 +112,7 @@ class _MorningPageState extends State<MorningPage> {
   Future<void> _saveRoutine() async {
     setState(() => _isSaving = true);
     try {
-      await widget.activitiesStorage.saveRoutineSleepTime(_sleepTime);
+      await widget.activitiesStorage.saveRoutineSleepTime(_riseTime);
       await widget.activitiesStorage.saveActivities(_activities);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -137,7 +137,7 @@ class _MorningPageState extends State<MorningPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.palette.background,
-      builder: (_) => ActivitySheet(activity: activity, sleepTime: _sleepTime),
+      builder: (_) => ActivitySheet(activity: activity, sleepTime: _riseTime),
     );
   }
 
@@ -176,9 +176,9 @@ class _MorningPageState extends State<MorningPage> {
                   children: [
                     const _TopBar(),
                     const SizedBox(height: 19),
-                    SleepTimeCard(
-                      sleepTime: _sleepTime,
-                      onEdit: _chooseSleepTime,
+                    RiseTimeCard(
+                      riseTime: _riseTime,
+                      onEdit: _chooseRiseTime,
                     ),
                     const SizedBox(height: 21),
                     Text(
@@ -243,7 +243,7 @@ class _TopBar extends StatelessWidget {
         ),
         const SizedBox(width: 25),
         Text(
-          'Avond',
+          'Ochtend',
           style: TextStyle(
             color: palette.muted,
             fontSize: 15,

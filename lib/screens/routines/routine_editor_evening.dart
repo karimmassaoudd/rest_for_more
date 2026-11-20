@@ -36,7 +36,7 @@ class EveningPage extends StatefulWidget {
 
 class _EveningPageState extends State<EveningPage> {
   late List<Activity> _activities;
-  String _sleepTime = defaultRoutineSleepTime;
+  String _sleepTime = defaultRoutineSleepTime; //this time comes from the savefile/database
   bool _isSaving = false;
 
   @override
