@@ -15,6 +15,9 @@ class FocusNotificationNavigation {
   /// when it shows the countdown.
   static const String timerLink = 'restformore://open-active-timer';
 
+  /// The link the routine countdown opens.
+  static const String routineLink = 'restformore://open-active-routine';
+
   /// Taps on the Android notification, reported by TimerNotificationService.
   static final _androidTaps = StreamController<String>.broadcast();
 
@@ -25,10 +28,16 @@ class FocusNotificationNavigation {
   StreamSubscription<String>? _androidSubscription;
 
   /// Starts listening; [openTimer] is called on every tap of the countdown.
-  void start({required Future<void> Function() openTimer}) {
+  void start({
+    required Future<void> Function() openTimer,
+    Future<void> Function()? openRoutine,
+  }) {
     void onLink(String link) {
-      if (link != timerLink) return;
-      unawaited(_handleTap(openTimer));
+      if (link == timerLink) {
+        unawaited(_handleTap(openTimer));
+      } else if (link == routineLink && openRoutine != null) {
+        unawaited(_handleTap(openRoutine));
+      }
     }
 
     _iosSubscription?.cancel();

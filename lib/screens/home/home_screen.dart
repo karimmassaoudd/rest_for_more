@@ -3,13 +3,14 @@ import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../models/routines/routine_step.dart';
 import '../../services/auth/auth_service.dart';
 import '../../services/focus/blocking_service.dart';
 import '../../services/focus/profile_events.dart';
 import '../../services/focus/session_store.dart';
 import '../../services/focus/timer_notification_service.dart';
+import '../../services/routines/routine_session_controller.dart';
 import '../../theme/app_fonts.dart';
-
 import '../../widgets/focus/permission_banner.dart';
 import '../../widgets/home/focus_profile_tile.dart';
 import '../../widgets/home/home_carousel.dart';
@@ -198,6 +199,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// "View …" and "… routine done" open the routine; "Continue …" goes straight to the running activity, like the notification.
+  void _openRoutine(RoutinePeriod period, RoutinePeriod? running, bool done) {
+    final continueIt = running == period && !done;
+    context.push(
+      '/routine?period=${period.name}${continueIt ? '&open=active' : ''}',
+    );
+  }
+
   // ------------------------------------------------------------------
   // Permissions
   // ------------------------------------------------------------------
@@ -254,17 +263,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             const SizedBox(height: 24),
             if (_permissionMissing) PermissionBanner(onTap: _fixPermission),
 
-            HomeCarousel(
-              cards: buildHomeCarouselCards(
-                context: context,
-                onStartFocus: _scrollToProfiles,
-                onMorningRoutine: () =>
-                    context.push('/routine?period=morning&start=true'),
-                onEveningRoutine: () =>
-                    context.push('/routine?period=evening&start=true'),
-                onStartPlan: () => context.push('/programme/intake'),
-              ),
-              initialIndex: homeCarouselIndexFor(now),
+            ListenableBuilder(
+              listenable: RoutineSessionController.instance,
+              builder: (context, _) {
+                final running = RoutineSessionController.instance.period;
+                final done = RoutineSessionController.instance.isDone;
+                return HomeCarousel(
+                  cards: buildHomeCarouselCards(
+                    context: context,
+                    onStartFocus: _scrollToProfiles,
+                    onMorningRoutine: () =>
+                        _openRoutine(RoutinePeriod.morning, running, done),
+                    onEveningRoutine: () =>
+                        _openRoutine(RoutinePeriod.evening, running, done),
+                    onStartPlan: () => context.push('/programme/intake'),
+                    runningRoutine: running,
+                    routineDone: done,
+                  ),
+                  initialIndex: homeCarouselIndexFor(
+                    now,
+                    runningRoutine: running,
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 28),

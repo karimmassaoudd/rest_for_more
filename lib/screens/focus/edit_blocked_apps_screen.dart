@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../models/focus/commonly_distracting_apps.dart';
 import '../../models/focus/hard_always_available_apps.dart';
 import '../../services/focus/always_available_apps_store.dart';
-import 'app_selection_screen.dart'; // was '../../widgets/focus/app_selection_screen.dart'
+import 'app_selection_screen.dart';
 
 /// Pick which apps this profile blocks during a session.
 ///
@@ -51,7 +51,8 @@ class _EditBlockedAppsScreenState extends State<EditBlockedAppsScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return AppSelectionScreen(
-      title: 'Edit Blocked Apps',
+      title: 'Edit blocked apps',
+      listName: 'blocked apps',
       loadInitialSelection: () async => widget.profile.appIdentifiers.toSet(),
       suggestedPackageNames: commonlyDistractingApps,
       validateToggle: (packageName, wantsSelected) {

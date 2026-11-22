@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 
-/// One step in the routine list: time, a round check button with an icon
-/// picked from the title, name, duration, and "Done" or a ⋮ menu.
-/// Tapping anywhere on the card ticks or unticks the step.
+/// One activity in the routine list: time, an icon picked from the title,
+/// name and duration, and a to-do circle on the right.
+///
+/// Tap opens the activity. Tapping the circle or swiping either way ticks
+/// it off, or unticks it when it's already done.
+/// Done: muted icon, strikethrough title and a filled ✓ on the right.
 class RoutineItemCard extends StatelessWidget {
   const RoutineItemCard({
     super.key,
@@ -14,6 +18,7 @@ class RoutineItemCard extends StatelessWidget {
     required this.isActive,
     required this.period,
     required this.palette,
+    required this.onOpen,
     required this.onToggle,
   });
 
@@ -22,6 +27,11 @@ class RoutineItemCard extends StatelessWidget {
   final bool isActive;
   final RoutinePeriod period;
   final RoutinePalette palette;
+
+  /// Tap: open this step's activity screen.
+  final VoidCallback onOpen;
+
+  /// Swipe (or the screen-reader action): tick or untick the step.
   final VoidCallback onToggle;
 
   /// Picks an icon from words in the title ("shower", "journal", …).
@@ -48,140 +58,128 @@ class RoutineItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completed = step.isCompleted;
-    final evening = period == RoutinePeriod.evening;
 
-    return Semantics(
-      button: true,
-      checked: completed,
-      label: '${step.title}, ${step.time}, ${step.duration}',
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: isActive && !completed ? Key('check-button-$index') : null,
-          onTap: onToggle,
-          borderRadius: BorderRadius.circular(14),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
-            decoration: BoxDecoration(
-              color: evening
-                  ? palette.card
-                  : completed
-                  ? palette.accentSoft.withValues(alpha: 0.38)
-                  : isActive
-                  ? palette.card.withValues(alpha: 0.72)
-                  : Colors.transparent,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Dismissible(
+        key: ValueKey('routine-swipe-${step.title}'),
+        // Swipe either way: right-handed and left-handed both work.
+        direction: DismissDirection.horizontal,
+        // The card never leaves the list: a swipe only ticks or unticks it.
+        confirmDismiss: (_) async {
+          onToggle();
+          return false;
+        },
+        background: _SwipeBackground(completed: completed, palette: palette),
+        secondaryBackground: _SwipeBackground(
+          completed: completed,
+          palette: palette,
+          alignEnd: true,
+        ),
+        child: Semantics(
+          button: true,
+          checked: completed,
+          label: '${step.title}, ${step.time}, ${step.duration}',
+          onTapHint: 'Open activity',
+          customSemanticsActions: {
+            CustomSemanticsAction(
+              label: completed ? 'Mark as not done' : 'Mark as done',
+            ): onToggle,
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: Key('routine-step-$index'),
+              onTap: onOpen,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: isActive
-                    ? palette.accent.withValues(alpha: 0.38)
-                    : evening
-                    ? Colors.transparent
-                    : palette.border.withValues(alpha: 0.18),
-              ),
-              boxShadow: isActive
-                  ? [
-                      BoxShadow(
-                        color: palette.text.withValues(alpha: 0.045),
-                        blurRadius: 14,
-                        offset: const Offset(0, 5),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 52,
-                  child: Text(
-                    step.time.replaceAll(' AM', '').replaceAll(' PM', ''),
-                    style: TextStyle(
-                      color: completed ? palette.muted : palette.text,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                    ),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 11,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  color: completed
+                      ? palette.accentSoft.withValues(alpha: 0.38)
+                      : palette.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isActive
+                        ? palette.accent.withValues(alpha: 0.38)
+                        : Colors.transparent,
                   ),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: palette.text.withValues(alpha: 0.045),
+                            blurRadius: 14,
+                            offset: const Offset(0, 5),
+                          ),
+                        ]
+                      : null,
                 ),
-                _CompletionControl(
-                  key: Key('routine-toggle-$index'),
-                  completed: completed,
-                  active: isActive,
-                  icon: _iconForStep(),
-                  palette: palette,
-                  onTap: onToggle,
-                ),
-                const SizedBox(width: 11),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        step.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 52,
+                      child: Text(
+                        step.time.replaceAll(' AM', '').replaceAll(' PM', ''),
                         style: TextStyle(
                           color: completed ? palette.muted : palette.text,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          decoration: completed
-                              ? TextDecoration.lineThrough
-                              : null,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        step.duration,
-                        style: TextStyle(color: palette.muted, fontSize: 9.5),
+                    ),
+                    // A plain icon, like the profile tiles on Home.
+                    Icon(
+                      _iconForStep(),
+                      key: Key('routine-step-icon-$index'),
+                      size: 26,
+                      color: completed ? palette.muted : palette.accent,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            step.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: completed ? palette.muted : palette.text,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              decoration: completed
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            step.duration,
+                            style: TextStyle(
+                              color: palette.muted,
+                              fontSize: 9.5,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 4),
+                    // The to-do circle on the right (inside a button): empty while open,
+                    // a filled ✓ when done.
+                    IconButton(
+                      key: Key('routine-step-done-$index'),
+                      onPressed: onToggle,
+                      tooltip: completed ? 'Mark as not done' : 'Mark as done',
+                      visualDensity: VisualDensity.compact,
+                      icon: _DoneMark(completed: completed, palette: palette),
+                    ),
+                  ],
                 ),
-                if (completed)
-                  Text(
-                    'Done',
-                    style: TextStyle(
-                      color: palette.accent,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  )
-                else
-                  PopupMenuButton<String>(
-                    key: Key('routine-menu-$index'),
-                    tooltip: 'Task options',
-                    padding: EdgeInsets.zero,
-                    color: palette.background,
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      color: palette.muted,
-                      size: 17,
-                    ),
-                    onSelected: (_) => onToggle(),
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'complete',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle_outline_rounded,
-                              color: palette.accent,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Mark as complete',
-                              style: TextStyle(
-                                color: palette.text,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+              ),
             ),
           ),
         ),
@@ -190,46 +188,77 @@ class RoutineItemCard extends StatelessWidget {
   }
 }
 
-/// The round button on the left of a step: its icon, or a check when done.
-class _CompletionControl extends StatelessWidget {
-  const _CompletionControl({
-    super.key,
-    required this.completed,
-    required this.active,
-    required this.icon,
-    required this.palette,
-    required this.onTap,
-  });
+/// The to-do circle on the right: empty while open, a filled ✓ when done.
+class _DoneMark extends StatelessWidget {
+  const _DoneMark({required this.completed, required this.palette});
 
   final bool completed;
-  final bool active;
-  final IconData icon;
   final RoutinePalette palette;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: completed ? palette.accent : palette.surface,
-      shape: const CircleBorder(),
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          width: 29,
-          height: 29,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: active && !completed
-                ? Border.all(color: palette.accent, width: 1.2)
-                : null,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) =>
+          ScaleTransition(scale: animation, child: child),
+      child: completed
+          ? Icon(
+              Icons.check_circle_rounded,
+              key: const ValueKey('done'),
+              size: 24,
+              color: palette.accent,
+            )
+          : Icon(
+              Icons.radio_button_unchecked_rounded,
+              key: const ValueKey('open'),
+              size: 24,
+              color: palette.border,
+            ),
+    );
+  }
+}
+
+/// What shows behind the card while it's swiped: "Done" or "Undo".
+class _SwipeBackground extends StatelessWidget {
+  const _SwipeBackground({
+    required this.completed,
+    required this.palette,
+    this.alignEnd = false,
+  });
+
+  final bool completed;
+  final RoutinePalette palette;
+
+  /// True for a swipe to the left: the label sits on the right.
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      decoration: BoxDecoration(
+        color: palette.accentSoft,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            completed ? Icons.undo_rounded : Icons.check_rounded,
+            color: palette.accent,
+            size: 18,
           ),
-          child: Icon(
-            completed ? Icons.check_rounded : icon,
-            size: 15,
-            color: completed ? palette.buttonText : palette.muted,
+          const SizedBox(width: 8),
+          Text(
+            completed ? 'Undo' : 'Done',
+            style: TextStyle(
+              color: palette.accent,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

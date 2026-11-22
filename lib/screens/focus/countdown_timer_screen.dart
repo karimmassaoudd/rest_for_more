@@ -8,11 +8,13 @@ import '../../services/focus/session_controller.dart';
 import '../../services/focus/timer_notification_service.dart';
 import '../../theme/app_fonts.dart';
 import '../../theme/app_palette.dart';
-import '../../widgets/common/rfm_logo.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/common/confirm_dialog.dart';
 import '../../widgets/focus/duration_presets.dart';
 import '../../widgets/focus/timer_dial.dart';
 import '../../widgets/focus/timer_primary_button.dart';
+import '../../widgets/focus/no_apps_dialog.dart';
+import '../../services/routines/routine_session_controller.dart';
 
 /// Focus timer for one [profile].
 ///
@@ -97,8 +99,32 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
   Future<void> _onStartPressed() async {
     if (_controller.remainingMillis <= 0) return;
 
+    final routine = RoutineSessionController.instance.period;
+    if (routine != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Your ${routineName(routine).toLowerCase()} routine is still '
+              "running. You can start a focus session when it's over.",
+            ),
+          ),
+        );
+      return;
+    }
+
+    final go = await confirmBlockedApps(
+      context,
+      widget.profile.id,
+      sessionName: '${widget.profile.name} session',
+    );
+    if (!go || !mounted) return;
+
     final granted = await _blocking.ensurePermission(context);
     if (!granted || !mounted) return;
+    await _blocking.ensureNotifications(context);
+    if (!mounted) return;
 
     final started = await _controller.start();
 
@@ -244,31 +270,7 @@ class _CountdownTimerPageState extends State<CountdownTimerPage>
 
   /// Back arrow, profile name and logo.
   Widget _buildHeader() {
-    final palette = context.palette;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      child: Row(
-        children: [
-          InkWell(
-            // Opened from the notification there is nothing underneath,
-            // so go Home instead of popping (pop would do nothing).
-            onTap: () => context.canPop() ? context.pop() : context.go('/'),
-            customBorder: const CircleBorder(),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(Icons.arrow_back, size: 25, color: palette.accent),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            widget.profile.name,
-            style: AppFonts.montserrat(size: 15, color: palette.accent),
-          ),
-          const Spacer(),
-          RfmLogo(textColor: context.palette.muted),
-        ],
-      ),
-    );
+    return RfmAppBar(title: widget.profile.name);
   }
 
   Widget _buildIntro() {

@@ -8,6 +8,7 @@ import 'services/focus/focus_notification_navigation.dart';
 import 'services/focus/profile_bootstrap.dart';
 import 'services/focus/timer_notification_service.dart';
 import 'services/onboarding/welcome_choice_store.dart';
+import 'services/routines/routine_session_controller.dart';
 import 'services/settings/locale_controller.dart';
 import 'services/settings/theme_controller.dart';
 import 'theme/app_theme.dart';
@@ -34,7 +35,11 @@ Future<void> main() async {
   AuthService.instance.start();
 
   await TimerNotificationService.instance.init();
+  // Opening the app stops a ringing end-of-session alarm.
+  await TimerNotificationService.instance.stopFocusAlarmIfOver();
   await ensureCoreProfiles();
+  // Continue a running routine, or unblock if its time is over.
+  await RoutineSessionController.instance.restore();
   await WelcomeChoiceStore.instance.load();
 
   runApp(const MyApp());
@@ -42,9 +47,9 @@ Future<void> main() async {
 
 /// Root widget.
 ///
-/// Rebuilds MaterialApp when the language or theme changes, and opens
-/// the countdown screen when the user taps the running-timer
-/// notification.
+/// Rebuilds MaterialApp when the language or theme changes, opens the
+/// countdown screen when the user taps the running-timer notification,
+/// and stops a ringing end-of-session alarm when the app is opened.
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -58,15 +63,31 @@ class _MyAppState extends State<MyApp> {
     ThemeController.instance,
   ]);
 
+  /// Coming back to the app also stops a ringing alarm.
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
-    FocusNotificationNavigation.instance.start(openTimer: _openActiveTimer);
+    FocusNotificationNavigation.instance.start(
+      openTimer: _openActiveTimer,
+      openRoutine: _openActiveRoutine,
+    );
+
+    // Started by tapping the countdown notification: open what it shows.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => TimerNotificationService.instance.reportLaunchTap(),
+    );
+
+    _lifecycle = AppLifecycleListener(
+      onResume: () => TimerNotificationService.instance.stopFocusAlarmIfOver(),
+    );
   }
 
   @override
   void dispose() {
     FocusNotificationNavigation.instance.stop();
+    _lifecycle.dispose();
     super.dispose();
   }
 
@@ -78,6 +99,15 @@ class _MyAppState extends State<MyApp> {
     } catch (error) {
       debugPrint('Failed to open active timer: $error');
     }
+  }
+
+  /// Tapping the routine countdown: open the routine at its running step.
+  Future<void> _openActiveRoutine() async {
+    final session = RoutineSessionController.instance;
+    await session.restore();
+    final period = session.period;
+    if (!mounted || period == null) return;
+    router.go('/routine?period=${period.name}&open=active');
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_fonts.dart';
 import '../../theme/app_palette.dart';
 import '../../widgets/focus/custom_preset_tile.dart';
+import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/focus/time_wheel.dart';
 
 /// Lets the user add and remove their own timer presets,
@@ -75,22 +76,7 @@ class _CustomTimePageState extends State<CustomTimePage> {
       },
       child: Scaffold(
         backgroundColor: context.palette.background,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(
-              Icons.arrow_back,
-              size: 25,
-              color: context.palette.accent,
-            ),
-            onPressed: _close,
-          ),
-          title: Text(
-            'Custom Timer',
-            style: AppFonts.montserrat(size: 15, color: context.palette.accent),
-          ),
-        ),
+        appBar: rfmScaffoldAppBar(title: 'Custom timer', onBack: _close),
         body: SafeArea(
           child: Column(
             children: [

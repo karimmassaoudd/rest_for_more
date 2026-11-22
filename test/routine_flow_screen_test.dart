@@ -3,8 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_rest_for_more/models/routines/routine_step.dart';
 import 'package:flutter_application_rest_for_more/screens/routines/routine_flow_screen.dart';
 import 'package:flutter_application_rest_for_more/theme/app_theme.dart';
+import 'package:flutter_application_rest_for_more/services/routines/routine_session_controller.dart';
 
 void main() {
+  setUp(() => RoutineSessionController.instance.resetForTest());
   Widget buildSubject({
     required List<RoutineStep> steps,
     required Future<void> Function(int) onStepCompleted,
@@ -36,14 +38,14 @@ void main() {
     );
 
     expect(find.text('First activity'), findsOneWidget);
-    expect(find.text('Next: Second activity'), findsOneWidget);
+    expect(find.text('Activity 1 of 2'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('complete-routine-step-button')));
     await tester.pump();
 
     expect(savedIndexes, [0]);
     expect(find.text('Second activity'), findsOneWidget);
-    expect(find.text('This is your final activity.'), findsOneWidget);
+    expect(find.text('Activity 2 of 2'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('complete-routine-step-button')));
     await tester.pump();
@@ -65,7 +67,9 @@ void main() {
   });
 
   testWidgets('handles empty and already-completed routines', (tester) async {
-    await tester.pumpWidget(buildSubject(steps: const [], onStepCompleted: (_) async {}));
+    await tester.pumpWidget(
+      buildSubject(steps: const [], onStepCompleted: (_) async {}),
+    );
     expect(find.text('No activities yet'), findsOneWidget);
 
     await tester.pumpWidget(
@@ -89,6 +93,36 @@ void main() {
     await tester.pump();
 
     expect(find.text('First activity'), findsOneWidget);
-    expect(find.text('Could not save routine progress. Please try again.'), findsOneWidget);
+    expect(
+      find.text('Could not save routine progress. Please try again.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a done activity can be marked as not done', (tester) async {
+    final reopened = <int>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: RoutineFlowScreen(
+          period: RoutinePeriod.morning,
+          steps: [steps.first.copyWith(isCompleted: true), steps.last],
+          initialIndex: 0,
+          onStepCompleted: (_) async {},
+          onStepReopened: (index) async => reopened.add(index),
+        ),
+      ),
+    );
+    expect(find.text('First activity'), findsOneWidget);
+    expect(find.byKey(const Key('routine-flow-done')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reopen-routine-step-button')));
+    await tester.pump();
+
+    expect(reopened, [0]);
+    expect(
+      find.byKey(const Key('complete-routine-step-button')),
+      findsOneWidget,
+    );
   });
 }

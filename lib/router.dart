@@ -143,10 +143,8 @@ final GoRouter router = GoRouter(
       builder: (context, state) {
         final evening = state.uri.queryParameters['period'] == 'evening';
         return RoutineScreen(
-          initialPeriod: evening
-              ? RoutinePeriod.evening
-              : RoutinePeriod.morning,
-          autoStartFlow: state.uri.queryParameters['start'] == 'true',
+          period: evening ? RoutinePeriod.evening : RoutinePeriod.morning,
+          openActiveStep: state.uri.queryParameters['open'] == 'active',
         );
       },
     ),

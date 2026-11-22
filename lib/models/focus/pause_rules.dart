@@ -1,8 +1,8 @@
 /// Length of one break during a focus session.
-const int kBreakMinutes = 5;
+const int kBreakMinutes = 5; //5
 
 /// Sessions shorter than this get no breaks at all.
-const int kMinMinutesForPause = 30;
+const int kMinMinutesForPause = 30; //30
 
 /// How many breaks a session of [sessionMinutes] gets:
 /// none under [kMinMinutesForPause], then one per full hour (at least one).
