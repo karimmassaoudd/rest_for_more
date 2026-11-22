@@ -5,7 +5,15 @@
       "name": "Rest For More",
       "request": "launch",
       "type": "dart",
-      "args": ["--dart-define-from-file=clerk.json"]
+      "args": [
+        "--dart-define-from-file=clerk.json"
+      ]
+    },
+    {
+      "name": "Flutter (lib\\main.dart)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib\\main.dart"
     }
   ]
 }

@@ -18,6 +18,8 @@ import 'screens/onboarding/questions_screen.dart';
 import 'screens/onboarding/tutorial_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile/profile_screen.dart';
+import 'screens/routines/routine_editor_evening.dart';
+import 'screens/routines/routine_editor_morning.dart';
 import 'screens/routines/routine_editor.dart';
 import 'screens/progress/routine_history_screen.dart';
 import 'screens/routines/routine_screen.dart';
@@ -151,7 +153,7 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/routine/morning',
-      redirect: (_, _) => '/routine?period=morning',
+      builder: (context, state) => const MorningPage(), //here is Daniel's code
     ),
     GoRoute(
       path: '/routine/evening',
@@ -159,11 +161,11 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/settings/routines',
-      builder: (context, state) => const RoutineSettingsScreen(),
+      builder: (context, state) => const RoutineSettingsScreen(), //this is the routine setting choice
     ),
     GoRoute(
       path: '/settings/routines/evening',
-      builder: (context, state) => const EveningPage(),
+      builder: (context, state) => const EveningPage(), //here is Daniel's code
     ),
 
     // ----- Not built yet -----

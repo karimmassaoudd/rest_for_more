@@ -10,8 +10,7 @@ import '../../theme/app_palette.dart';
 
 import '../../widgets/routines/activity_sheet.dart';
 import '../../widgets/routines/activity_tile.dart';
-import '../../widgets/routines/sleep_time_card.dart';
-import '../../widgets/common/rfm_app_bar.dart';
+import '../../widgets/routines/rise_time_card.dart';
 
 /// Name of the bedtime activity; it always follows the chosen bedtime
 /// and is always shown last. Must match default_evening_activities.dart.
@@ -21,8 +20,9 @@ const _sleepActivityName = 'Slapen';
 /// set the bedtime, and add, edit or delete evening activities.
 ///
 /// Bedtime and activity changes are persisted when the user saves.
-class EveningPage extends StatefulWidget {
-  const EveningPage({
+class MorningPage extends StatefulWidget {
+  /// Creates the morning routine editor page.
+  const MorningPage({
     super.key,
     this.activitiesStorage = const SaveActivities(),
   });
@@ -31,12 +31,12 @@ class EveningPage extends StatefulWidget {
   final SaveActivities activitiesStorage;
 
   @override
-  State<EveningPage> createState() => _EveningPageState();
+  State<MorningPage> createState() => _MorningPageState();
 }
 
-class _EveningPageState extends State<EveningPage> {
+class _MorningPageState extends State<MorningPage> {
   late List<Activity> _activities;
-  String _sleepTime = defaultRoutineSleepTime;
+  String _riseTime = defaultRoutineSleepTime; //this time comes from the savefile/database
   bool _isSaving = false;
 
   @override
@@ -60,7 +60,7 @@ class _EveningPageState extends State<EveningPage> {
   }
 
   // ------------------------------------------------------------------
-  // Bedtime
+  // Time of getting up
   // ------------------------------------------------------------------
 
   Future<void> _loadRoutine() async {
@@ -71,22 +71,22 @@ class _EveningPageState extends State<EveningPage> {
       ]);
       if (!mounted) return;
       setState(() {
-        _sleepTime = result[0] as String;
+        _riseTime = result[0] as String;
         _activities = result[1] as List<Activity>;
         _updateSleepActivityTime();
       });
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bedtijd laden is mislukt: $error')),
+        SnackBar(content: Text('opstaan tijd laden is mislukt: $error')),
       );
     }
   }
 
-  Future<void> _chooseSleepTime() async {
+  Future<void> _chooseRiseTime() async {
     final time = await showTimePicker(
       context: context,
-      initialTime: parseTime24h(_sleepTime),
+      initialTime: parseTime24h(_riseTime),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
@@ -94,7 +94,7 @@ class _EveningPageState extends State<EveningPage> {
     );
     if (time == null || !mounted) return;
     setState(() {
-      _sleepTime = formatTime24h(time);
+      _riseTime = formatTime24h(time);
       _updateSleepActivityTime();
     });
   }
@@ -103,7 +103,7 @@ class _EveningPageState extends State<EveningPage> {
   void _updateSleepActivityTime() {
     for (final activity in _activities) {
       if (activity.name == _sleepActivityName) {
-        activity.time = _sleepTime;
+        activity.time = _riseTime;
         return;
       }
     }
@@ -112,7 +112,7 @@ class _EveningPageState extends State<EveningPage> {
   Future<void> _saveRoutine() async {
     setState(() => _isSaving = true);
     try {
-      await widget.activitiesStorage.saveRoutineSleepTime(_sleepTime);
+      await widget.activitiesStorage.saveRoutineSleepTime(_riseTime);
       await widget.activitiesStorage.saveActivities(_activities);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -137,7 +137,7 @@ class _EveningPageState extends State<EveningPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.palette.background,
-      builder: (_) => ActivitySheet(activity: activity, sleepTime: _sleepTime),
+      builder: (_) => ActivitySheet(activity: activity, sleepTime: _riseTime),
     );
   }
 
@@ -168,20 +168,21 @@ class _EveningPageState extends State<EveningPage> {
       body: SafeArea(
         child: Column(
           children: [
-            const RfmAppBar(title: 'Avond'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(23, 17, 23, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SleepTimeCard(
-                      sleepTime: _sleepTime,
-                      onEdit: _chooseSleepTime,
+                    const _TopBar(),
+                    const SizedBox(height: 19),
+                    RiseTimeCard(
+                      riseTime: _riseTime,
+                      onEdit: _chooseRiseTime,
                     ),
                     const SizedBox(height: 21),
                     Text(
-                      'JOUW AVOND',
+                      'JOUW OCHTEND',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: context.palette.muted,
                         fontSize: 9,
@@ -227,7 +228,35 @@ class _EveningPageState extends State<EveningPage> {
   }
 }
 
+/// Back arrow and the page title.
+class _TopBar extends StatelessWidget {
+  const _TopBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Row(
+      children: [
+        IconButton(
+          icon: Icon(Icons.arrow_back, size: 19, color: palette.text),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        const SizedBox(width: 25),
+        Text(
+          'Ochtend',
+          style: TextStyle(
+            color: palette.muted,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// "+ Activiteit toevoegen" button.
+
 class _OutlinedAction extends StatelessWidget {
   const _OutlinedAction({required this.label, required this.onPressed});
 
