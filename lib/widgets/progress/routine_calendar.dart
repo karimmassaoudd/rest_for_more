@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../models/routines/routine_step.dart';
-import '../../services/routines/routine_progress_storage.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
 import '../../widgets/common/rfm_app_bar.dart';
 
-class RoutineHistoryScreen extends StatefulWidget {
-  const RoutineHistoryScreen({
+/// Displays a month of saved routine completion data in the Progress tab.
+class RoutineCalendar extends StatelessWidget {
+  const RoutineCalendar({
     super.key,
     this.storage = const RoutineProgressStorage(),
   });
@@ -101,6 +101,7 @@ class _Calendar extends StatelessWidget {
     required this.palette,
     required this.onMonth,
   });
+
   final DateTime month;
   final Map<String, RoutineDayRecord> records;
   final RoutinePalette palette;
@@ -189,10 +190,17 @@ class _Calendar extends StatelessWidget {
   }
 }
 
-class _RecordCard extends StatelessWidget {
-  const _RecordCard({required this.record, required this.palette});
+/// Shows one saved day below the calendar in the Progress tab.
+class RoutineProgressRecordCard extends StatelessWidget {
+  const RoutineProgressRecordCard({
+    super.key,
+    required this.record,
+    required this.palette,
+  });
+
   final RoutineDayRecord record;
   final RoutinePalette palette;
+
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 10),
@@ -215,7 +223,7 @@ class _RecordCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(
-            'Morning ${record.morningCompleted}/${record.morningTotal} · Evening ${record.eveningCompleted}/${record.eveningTotal}',
+            'Morning ${record.morningCompleted}/${record.morningTotal} Â· Evening ${record.eveningCompleted}/${record.eveningTotal}',
             style: AppFonts.manrope(size: 12, color: palette.muted),
           ),
         ],

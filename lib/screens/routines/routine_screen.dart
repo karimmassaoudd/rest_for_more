@@ -18,6 +18,7 @@ import '../../widgets/routines/routine_item_card.dart';
 import '../../widgets/routines/steps_heading.dart';
 import 'routine_flow_screen.dart';
 import 'routine_history_debug_screen.dart';
+import 'reminder_settings_screen.dart';
 
 /// The morning or evening routine (view only): progress, the list of
 /// steps, and a button that opens the activity screen at the first open activity.
@@ -276,8 +277,41 @@ class _RoutineScreenState extends State<RoutineScreen> {
                           total: _steps.length,
                         ),
                         const SizedBox(height: 12),
-                        BlockedUntilNote(period: widget.period),
-                        const SizedBox(height: 14),
+                        RoutinePeriodSwitcher(
+                          period: _period,
+                          palette: palette,
+                          onChanged: (period) =>
+                              setState(() => _period = period),
+                        ),
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.center,
+                          child: Wrap(
+                            spacing: 4,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ReminderSettingsScreen(),
+                                  ),
+                                ),
+                                icon: const Icon(
+                                  Icons.notifications_outlined,
+                                  size: 16,
+                                ),
+                                label: const Text('Reminders'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TaskPreview(
+                          currentStep: currentStep,
+                          nextStep: nextStep,
+                          palette: palette,
+                        ),
+                        const SizedBox(height: 22),
                         StepsHeading(remaining: _remaining, palette: palette),
                         const SizedBox(height: 12),
                         for (var index = 0; index < _steps.length; index++)
