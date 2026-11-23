@@ -135,7 +135,7 @@ class RoutineProgressRecordCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(
-            'Morning ${record.morningCompleted}/${record.morningTotal} Â· Evening ${record.eveningCompleted}/${record.eveningTotal}',
+            'Morning ${record.morningCompleted}/${record.morningTotal} · Evening ${record.eveningCompleted}/${record.eveningTotal}',
             style: AppFonts.manrope(size: 12, color: palette.muted),
           ),
         ],
