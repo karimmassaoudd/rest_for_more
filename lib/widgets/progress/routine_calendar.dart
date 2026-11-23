@@ -3,99 +3,11 @@ import 'package:flutter/material.dart';
 import '../../models/routines/routine_step.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_fonts.dart';
-import '../../widgets/common/rfm_app_bar.dart';
 
 /// Displays a month of saved routine completion data in the Progress tab.
 class RoutineCalendar extends StatelessWidget {
   const RoutineCalendar({
     super.key,
-    this.storage = const RoutineProgressStorage(),
-  });
-  final RoutineProgressStorage storage;
-
-  @override
-  State<RoutineHistoryScreen> createState() => _RoutineHistoryScreenState();
-}
-
-class _RoutineHistoryScreenState extends State<RoutineHistoryScreen> {
-  late Future<List<RoutineDayRecord>> _history;
-  late DateTime _month;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _month = DateTime(now.year, now.month);
-    _history = widget.storage.loadHistory();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = RoutinePalette.of(context);
-    return Scaffold(
-      backgroundColor: palette.background,
-      appBar: rfmScaffoldAppBar(title: 'History'),
-      body: FutureBuilder<List<RoutineDayRecord>>(
-        future: _history,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(
-              child: CircularProgressIndicator(color: palette.accent),
-            );
-          }
-          final records = {for (final item in snapshot.data!) item.date: item};
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text(
-                'Your routine calendar',
-                style: AppFonts.cormorant(
-                  size: 30,
-                  weight: FontWeight.w600,
-                  color: palette.text,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _Calendar(
-                month: _month,
-                records: records,
-                palette: palette,
-                onMonth: (delta) => setState(
-                  () => _month = DateTime(_month.year, _month.month + delta),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Recent days',
-                style: AppFonts.montserrat(
-                  size: 11,
-                  weight: FontWeight.w800,
-                  color: palette.muted,
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (records.isEmpty)
-                Text(
-                  'No routine progress saved yet.',
-                  style: AppFonts.manrope(size: 14, color: palette.muted),
-                ),
-              ...records.values
-                  .toList()
-                  .reversed
-                  .take(14)
-                  .map(
-                    (record) => _RecordCard(record: record, palette: palette),
-                  ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _Calendar extends StatelessWidget {
-  const _Calendar({
     required this.month,
     required this.records,
     required this.palette,
