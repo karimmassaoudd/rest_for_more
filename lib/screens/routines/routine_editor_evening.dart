@@ -8,10 +8,10 @@ import '../../services/routines/save_activities.dart';
 
 import '../../theme/app_palette.dart';
 
+import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/routines/activity_sheet.dart';
 import '../../widgets/routines/activity_tile.dart';
 import '../../widgets/routines/sleep_time_card.dart';
-import '../../widgets/common/rfm_app_bar.dart';
 
 /// Name of the bedtime activity; it always follows the chosen bedtime
 /// and is always shown last. Must match default_evening_activities.dart.
@@ -37,7 +37,8 @@ class EveningPage extends StatefulWidget {
 
 class _EveningPageState extends State<EveningPage> {
   late List<Activity> _activities;
-  String _sleepTime = defaultRoutineSleepTime; //this time comes from the savefile/database
+  String _sleepTime =
+      defaultRoutineSleepTime; //this time comes from the savefile/database
   bool _isSaving = false;
 
   @override
@@ -224,33 +225,6 @@ class _EveningPageState extends State<EveningPage> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Back arrow and the page title.
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Row(
-      children: [
-        IconButton(
-          icon: Icon(Icons.arrow_back, size: 19, color: palette.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        const SizedBox(width: 25),
-        Text(
-          'Avond',
-          style: TextStyle(
-            color: palette.muted,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }
