@@ -149,50 +149,146 @@ abstract class AppLocalizations {
   /// Tutorial page 1 title.
   ///
   /// In en, this message translates to:
-  /// **'Focus sessions'**
+  /// **'Focus on a profile'**
   String get tutorialFocusTitle;
 
   /// Tutorial page 1 text.
   ///
   /// In en, this message translates to:
-  /// **'Pick a profile like Study or Read, choose a time, and distracting apps are blocked until it ends.'**
+  /// **'Choose a profile to focus on for the day and block distracting notifications from your phone.'**
   String get tutorialFocusText;
 
+  /// Tutorial page 1 text under the profile list.
+  ///
+  /// In en, this message translates to:
+  /// **'Or create and add your own profile to the list in settings.'**
+  String get tutorialFocusText2;
+
+  /// Tutorial page 1 example profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get tutorialFocusProfile1;
+
+  /// Tutorial page 1 example profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get tutorialFocusProfile2;
+
+  /// Tutorial page 1 example profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get tutorialFocusProfile3;
+
   /// Tutorial page 2 title.
+  ///
+  /// In en, this message translates to:
+  /// **'Block distractions'**
+  String get tutorialBlockTitle;
+
+  /// Tutorial page 2 text.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the apps you want to block and start a session.'**
+  String get tutorialBlockText;
+
+  /// Tutorial page 2 text under the app icons.
+  ///
+  /// In en, this message translates to:
+  /// **'During your session, these apps will remain inaccessible, helping you avoid distractions and stay focused until your session is complete.'**
+  String get tutorialBlockText2;
+
+  /// Tutorial page 3 title.
   ///
   /// In en, this message translates to:
   /// **'Always reachable'**
   String get tutorialReachableTitle;
 
-  /// Tutorial page 2 text.
-  ///
-  /// In en, this message translates to:
-  /// **'Calls, messages and the apps you choose stay available during every session.'**
-  String get tutorialReachableText;
-
-  /// Tutorial page 3 title.
-  ///
-  /// In en, this message translates to:
-  /// **'Morning and evening routines'**
-  String get tutorialRoutinesTitle;
-
   /// Tutorial page 3 text.
   ///
   /// In en, this message translates to:
-  /// **'Small calm steps to start and end your day without your phone.'**
-  String get tutorialRoutinesText;
+  /// **'Calls and messages are always available during any session.'**
+  String get tutorialReachableText;
+
+  /// Tutorial page 3 text under the first one.
+  ///
+  /// In en, this message translates to:
+  /// **'Other application that you choose to stay can also be made available in settings.'**
+  String get tutorialReachableText2;
 
   /// Tutorial page 4 title.
   ///
   /// In en, this message translates to:
-  /// **'You stay in control'**
-  String get tutorialControlTitle;
+  /// **'Take control of your time'**
+  String get tutorialTimeTitle;
 
-  /// Tutorial page 4 text.
+  /// Tutorial page 4 text next to the timer phone.
   ///
   /// In en, this message translates to:
-  /// **'Need your phone after all? Emergency unlock ends a session whenever you need it.'**
+  /// **'Set up timers that fit your daily life.'**
+  String get tutorialTimeText;
+
+  /// Tutorial page 4 text under the timer phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Whether you\'re studying, reading, or taking a break from your phone, you decide how long you want to stay focused.'**
+  String get tutorialTimeText2;
+
+  /// Tutorial page 4 last text.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session continues even when you switch apps or lock your phone.'**
+  String get tutorialTimeText3;
+
+  /// Tutorial page 5 title.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow a routine'**
+  String get tutorialRoutinesTitle;
+
+  /// Tutorial page 5 text next to the routine cards.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your own morning and evening routines.'**
+  String get tutorialRoutinesText;
+
+  /// Text on the morning routine card (tutorial page 5).
+  ///
+  /// In en, this message translates to:
+  /// **'Good morning'**
+  String get tutorialRoutinesMorning;
+
+  /// Text on the evening routine card (tutorial page 5).
+  ///
+  /// In en, this message translates to:
+  /// **'Good evening'**
+  String get tutorialRoutinesEvening;
+
+  /// Tutorial page 5 text under the routine cards.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose activities that help you start your day with intention and wind down before bedtime.'**
+  String get tutorialRoutinesText2;
+
+  /// Tutorial page 6 title.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay in control'**
+  String get tutorialControlTitle;
+
+  /// Tutorial page 6 text.
+  ///
+  /// In en, this message translates to:
+  /// **'Need your phone anyways?'**
   String get tutorialControlText;
+
+  /// Tutorial page 6 text under the first one.
+  ///
+  /// In en, this message translates to:
+  /// **'Emergency unlock allows you to end an active session whenever you need it.'**
+  String get tutorialControlText2;
 
   /// Tutorial button on the last page.
   ///

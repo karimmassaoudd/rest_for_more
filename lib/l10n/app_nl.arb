@@ -1,4 +1,3 @@
-
 {
   "@@locale": "nl",
 
@@ -12,17 +11,35 @@
   "languageSubtitle": "Je kunt dit later wijzigen in je profielinstellingen.",
   "languageContinue": "Doorgaan",
 
-  "tutorialFocusTitle": "Focussessies",
-  "tutorialFocusText": "Kies een profiel zoals Studeren of Lezen, kies een tijd, en afleidende apps worden geblokkeerd tot de sessie voorbij is.",
+  "tutorialFocusTitle": "Focus op een profiel",
+  "tutorialFocusText": "Kies een profiel om op te focussen voor de dag en blokkeer afleidende meldingen van je telefoon.",
+  "tutorialFocusText2": "Of maak je eigen profiel en voeg het toe aan de lijst in de instellingen.",
+  "tutorialFocusProfile1": "Focus",
+  "tutorialFocusProfile2": "Lezen",
+  "tutorialFocusProfile3": "Studeren",
+
+  "tutorialBlockTitle": "Blokkeer afleiding",
+  "tutorialBlockText": "Kies de apps die je wilt blokkeren en start een sessie.",
+  "tutorialBlockText2": "Tijdens je sessie blijven deze apps ontoegankelijk, zodat je niet wordt afgeleid en gefocust blijft tot je sessie klaar is.",
 
   "tutorialReachableTitle": "Altijd bereikbaar",
-  "tutorialReachableText": "Oproepen, berichten en de apps die je kiest blijven tijdens elke sessie beschikbaar.",
+  "tutorialReachableText": "Oproepen en berichten zijn tijdens elke sessie altijd beschikbaar.",
+  "tutorialReachableText2": "Andere apps die je beschikbaar wilt houden, kun je in de instellingen toevoegen.",
 
-  "tutorialRoutinesTitle": "Ochtend- en avondroutines",
-  "tutorialRoutinesText": "Kleine, rustige stappen om je dag te beginnen en af te sluiten zonder je telefoon.",
+  "tutorialTimeTitle": "Neem de regie over je tijd",
+  "tutorialTimeText": "Stel timers in die passen bij je dag.",
+  "tutorialTimeText2": "Of je nu studeert, leest of een pauze neemt van je telefoon: jij bepaalt hoe lang je gefocust blijft.",
+  "tutorialTimeText3": "Je sessie loopt door, ook als je van app wisselt of je telefoon vergrendelt.",
 
-  "tutorialControlTitle": "Jij houdt de controle",
-  "tutorialControlText": "Heb je je telefoon toch nodig? Met de noodontgrendeling beëindig je een sessie wanneer je maar wilt.",
+  "tutorialRoutinesTitle": "Volg een routine",
+  "tutorialRoutinesText": "Maak je eigen ochtend- en avondroutines.",
+  "tutorialRoutinesMorning": "Goedemorgen",
+  "tutorialRoutinesEvening": "Goedenavond",
+  "tutorialRoutinesText2": "Kies activiteiten die je helpen om je dag bewust te beginnen en voor het slapengaan tot rust te komen.",
+
+  "tutorialControlTitle": "Houd de controle",
+  "tutorialControlText": "Heb je je telefoon toch nodig?",
+  "tutorialControlText2": "Met de noodontgrendeling beëindig je een actieve sessie wanneer je maar wilt.",
 
   "tutorialStart": "Starten",
   "tutorialNext": "Volgende",

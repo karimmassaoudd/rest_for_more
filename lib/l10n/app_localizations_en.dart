@@ -36,32 +36,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get languageContinue => 'Continue';
 
   @override
-  String get tutorialFocusTitle => 'Focus sessions';
+  String get tutorialFocusTitle => 'Focus on a profile';
 
   @override
   String get tutorialFocusText =>
-      'Pick a profile like Study or Read, choose a time, and distracting apps are blocked until it ends.';
+      'Choose a profile to focus on for the day and block distracting notifications from your phone.';
+
+  @override
+  String get tutorialFocusText2 =>
+      'Or create and add your own profile to the list in settings.';
+
+  @override
+  String get tutorialFocusProfile1 => 'Focus';
+
+  @override
+  String get tutorialFocusProfile2 => 'Read';
+
+  @override
+  String get tutorialFocusProfile3 => 'Study';
+
+  @override
+  String get tutorialBlockTitle => 'Block distractions';
+
+  @override
+  String get tutorialBlockText =>
+      'Choose the apps you want to block and start a session.';
+
+  @override
+  String get tutorialBlockText2 =>
+      'During your session, these apps will remain inaccessible, helping you avoid distractions and stay focused until your session is complete.';
 
   @override
   String get tutorialReachableTitle => 'Always reachable';
 
   @override
   String get tutorialReachableText =>
-      'Calls, messages and the apps you choose stay available during every session.';
+      'Calls and messages are always available during any session.';
 
   @override
-  String get tutorialRoutinesTitle => 'Morning and evening routines';
+  String get tutorialReachableText2 =>
+      'Other application that you choose to stay can also be made available in settings.';
+
+  @override
+  String get tutorialTimeTitle => 'Take control of your time';
+
+  @override
+  String get tutorialTimeText => 'Set up timers that fit your daily life.';
+
+  @override
+  String get tutorialTimeText2 =>
+      'Whether you\'re studying, reading, or taking a break from your phone, you decide how long you want to stay focused.';
+
+  @override
+  String get tutorialTimeText3 =>
+      'Your session continues even when you switch apps or lock your phone.';
+
+  @override
+  String get tutorialRoutinesTitle => 'Follow a routine';
 
   @override
   String get tutorialRoutinesText =>
-      'Small calm steps to start and end your day without your phone.';
+      'Create your own morning and evening routines.';
 
   @override
-  String get tutorialControlTitle => 'You stay in control';
+  String get tutorialRoutinesMorning => 'Good morning';
 
   @override
-  String get tutorialControlText =>
-      'Need your phone after all? Emergency unlock ends a session whenever you need it.';
+  String get tutorialRoutinesEvening => 'Good evening';
+
+  @override
+  String get tutorialRoutinesText2 =>
+      'Choose activities that help you start your day with intention and wind down before bedtime.';
+
+  @override
+  String get tutorialControlTitle => 'Stay in control';
+
+  @override
+  String get tutorialControlText => 'Need your phone anyways?';
+
+  @override
+  String get tutorialControlText2 =>
+      'Emergency unlock allows you to end an active session whenever you need it.';
 
   @override
   String get tutorialStart => 'Start';
