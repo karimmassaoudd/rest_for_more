@@ -1,26 +1,18 @@
 import 'routine_step.dart';
 
 /// The morning routine shown until the user changes it.
-/// The first three steps start ticked off, as an example.
 const defaultMorningSteps = [
   RoutineStep(
     title: 'Cold Water & Electrolytes',
     time: '7:00 AM',
     duration: '5 min',
-    isCompleted: true,
   ),
   RoutineStep(
     title: 'Box Breathing & Stretch',
     time: '7:05 AM',
     duration: '10 min',
-    isCompleted: true,
   ),
-  RoutineStep(
-    title: 'Sensory Shower',
-    time: '7:15 AM',
-    duration: '15 min',
-    isCompleted: true,
-  ),
+  RoutineStep(title: 'Sensory Shower', time: '7:15 AM', duration: '15 min'),
   RoutineStep(
     title: 'Matcha & Intention Journal',
     time: '7:30 AM',

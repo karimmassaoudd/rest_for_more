@@ -36,32 +36,86 @@ class AppLocalizationsNl extends AppLocalizations {
   String get languageContinue => 'Doorgaan';
 
   @override
-  String get tutorialFocusTitle => 'Focussessies';
+  String get tutorialFocusTitle => 'Focus op een profiel';
 
   @override
   String get tutorialFocusText =>
-      'Kies een profiel zoals Studeren of Lezen, kies een tijd, en afleidende apps worden geblokkeerd tot de sessie voorbij is.';
+      'Kies een profiel om op te focussen voor de dag en blokkeer afleidende meldingen van je telefoon.';
+
+  @override
+  String get tutorialFocusText2 =>
+      'Of maak je eigen profiel en voeg het toe aan de lijst in de instellingen.';
+
+  @override
+  String get tutorialFocusProfile1 => 'Focus';
+
+  @override
+  String get tutorialFocusProfile2 => 'Lezen';
+
+  @override
+  String get tutorialFocusProfile3 => 'Studeren';
+
+  @override
+  String get tutorialBlockTitle => 'Blokkeer afleiding';
+
+  @override
+  String get tutorialBlockText =>
+      'Kies de apps die je wilt blokkeren en start een sessie.';
+
+  @override
+  String get tutorialBlockText2 =>
+      'Tijdens je sessie blijven deze apps ontoegankelijk, zodat je niet wordt afgeleid en gefocust blijft tot je sessie klaar is.';
 
   @override
   String get tutorialReachableTitle => 'Altijd bereikbaar';
 
   @override
   String get tutorialReachableText =>
-      'Oproepen, berichten en de apps die je kiest blijven tijdens elke sessie beschikbaar.';
+      'Oproepen en berichten zijn tijdens elke sessie altijd beschikbaar.';
 
   @override
-  String get tutorialRoutinesTitle => 'Ochtend- en avondroutines';
+  String get tutorialReachableText2 =>
+      'Andere apps die je beschikbaar wilt houden, kun je in de instellingen toevoegen.';
 
   @override
-  String get tutorialRoutinesText =>
-      'Kleine, rustige stappen om je dag te beginnen en af te sluiten zonder je telefoon.';
+  String get tutorialTimeTitle => 'Neem de regie over je tijd';
 
   @override
-  String get tutorialControlTitle => 'Jij houdt de controle';
+  String get tutorialTimeText => 'Stel timers in die passen bij je dag.';
 
   @override
-  String get tutorialControlText =>
-      'Heb je je telefoon toch nodig? Met de noodontgrendeling beëindig je een sessie wanneer je maar wilt.';
+  String get tutorialTimeText2 =>
+      'Of je nu studeert, leest of een pauze neemt van je telefoon: jij bepaalt hoe lang je gefocust blijft.';
+
+  @override
+  String get tutorialTimeText3 =>
+      'Je sessie loopt door, ook als je van app wisselt of je telefoon vergrendelt.';
+
+  @override
+  String get tutorialRoutinesTitle => 'Volg een routine';
+
+  @override
+  String get tutorialRoutinesText => 'Maak je eigen ochtend- en avondroutines.';
+
+  @override
+  String get tutorialRoutinesMorning => 'Goedemorgen';
+
+  @override
+  String get tutorialRoutinesEvening => 'Goedenavond';
+
+  @override
+  String get tutorialRoutinesText2 =>
+      'Kies activiteiten die je helpen om je dag bewust te beginnen en voor het slapengaan tot rust te komen.';
+
+  @override
+  String get tutorialControlTitle => 'Houd de controle';
+
+  @override
+  String get tutorialControlText => 'Heb je je telefoon toch nodig?';
+
+  @override
+  String get tutorialControlText2 =>
+      'Met de noodontgrendeling beëindig je een actieve sessie wanneer je maar wilt.';
 
   @override
   String get tutorialStart => 'Starten';

@@ -4,8 +4,8 @@ import 'package:app_blocker/app_blocker.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../models/focus/pause_rules.dart';
+import '../routines/routine_session_controller.dart';
 import 'blocking_service.dart';
-import 'keep_timer_running.dart';
 import 'session_store.dart';
 import 'timer_notification_service.dart';
 
@@ -90,8 +90,6 @@ class SessionController extends ChangeNotifier {
         hasStarted = true;
         await _readSessionState();
 
-        await KeepRunningTimerClock.instance.refresh();
-
         _wasOnBreak = isOnBreak;
         if (_breakEnd > 0 && !isOnBreak) {
           // A break happened and is over: make sure the shade shows focus time.
@@ -108,8 +106,10 @@ class SessionController extends ChangeNotifier {
         hasStarted = false;
         remainingMillis = totalMillis;
         _resetBreakState();
-        await _alerts.cancelAll();
-        await KeepRunningTimerClock.instance.refresh();
+        // Don't remove a running routine's notification.
+        if (!RoutineSessionController.instance.isActive) {
+          await _alerts.cancelAll();
+        }
         _notify();
       }
     } catch (error) {
@@ -163,7 +163,6 @@ class SessionController extends ChangeNotifier {
 
   /// Starts the session. Permission must already be granted.
   /// Returns false if it could not start (everything is undone then).
-  // Future<bool> start() async {
   Future<bool> start() async {
     if (remainingMillis <= 0) return false;
     if (_starting) return false;
@@ -175,7 +174,6 @@ class SessionController extends ChangeNotifier {
       await _session.setProfileId(profile.id);
       await _blocking.startBlocking(profile);
       await _readSessionState();
-      await KeepRunningTimerClock.instance.refresh();
       _runTimer();
       await _alerts.scheduleEnd(
         endAt: DateTime.fromMillisecondsSinceEpoch(_endAt),
@@ -197,7 +195,6 @@ class SessionController extends ChangeNotifier {
     try {
       await _session.startBreak(const Duration(minutes: kBreakMinutes));
       await _readSessionState();
-      await KeepRunningTimerClock.instance.refresh();
       _shownSecond = -1;
       _notify();
       await _alerts.startBreak(

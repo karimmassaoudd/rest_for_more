@@ -8,21 +8,22 @@ import '../../services/routines/save_activities.dart';
 
 import '../../theme/app_palette.dart';
 
+import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/routines/activity_sheet.dart';
 import '../../widgets/routines/activity_tile.dart';
-import '../../widgets/routines/sleep_time_card.dart';
+import '../../widgets/routines/rise_time_card.dart';
 
 /// Name of the bedtime activity; it always follows the chosen bedtime
 /// and is always shown last. Must match default_evening_activities.dart.
 const _sleepActivityName = 'Slapen';
 
-/// Editor for the evening routine (Settings → Edit routines):
-/// set the bedtime, and add, edit or delete evening activities.
+/// Editor for the morning routine (Settings → Edit routines):
+/// set the wake-up time, and add, edit or delete morning activities.
 ///
-/// Only the bedtime is saved for now; activity changes last until the
-/// page is closed.
-class EveningPage extends StatefulWidget {
-  const EveningPage({
+/// Bedtime and activity changes are persisted when the user saves.
+class MorningPage extends StatefulWidget {
+  /// Creates the morning routine editor page.
+  const MorningPage({
     super.key,
     this.activitiesStorage = const SaveActivities(),
   });
@@ -31,19 +32,20 @@ class EveningPage extends StatefulWidget {
   final SaveActivities activitiesStorage;
 
   @override
-  State<EveningPage> createState() => _EveningPageState();
+  State<MorningPage> createState() => _MorningPageState();
 }
 
-class _EveningPageState extends State<EveningPage> {
-  late final List<Activity> _activities;
-  String _sleepTime = defaultRoutineSleepTime;
+class _MorningPageState extends State<MorningPage> {
+  late List<Activity> _activities;
+  String _riseTime =
+      defaultRoutineSleepTime; //this time comes from the savefile/database
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _activities = widget.activitiesStorage.getActivities();
-    unawaited(_loadSleepTime());
+    unawaited(_loadRoutine());
   }
 
   /// Bedtime last, everything else by time.
@@ -60,29 +62,33 @@ class _EveningPageState extends State<EveningPage> {
   }
 
   // ------------------------------------------------------------------
-  // Bedtime
+  // Time of getting up
   // ------------------------------------------------------------------
 
-  Future<void> _loadSleepTime() async {
+  Future<void> _loadRoutine() async {
     try {
-      final sleepTime = await widget.activitiesStorage.loadRoutineSleepTime();
+      final result = await Future.wait([
+        widget.activitiesStorage.loadRoutineSleepTime(),
+        widget.activitiesStorage.loadActivities(),
+      ]);
       if (!mounted) return;
       setState(() {
-        _sleepTime = sleepTime;
+        _riseTime = result[0] as String;
+        _activities = result[1] as List<Activity>;
         _updateSleepActivityTime();
       });
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bedtijd laden is mislukt: $error')),
+        SnackBar(content: Text('opstaan tijd laden is mislukt: $error')),
       );
     }
   }
 
-  Future<void> _chooseSleepTime() async {
+  Future<void> _chooseRiseTime() async {
     final time = await showTimePicker(
       context: context,
-      initialTime: parseTime24h(_sleepTime),
+      initialTime: parseTime24h(_riseTime),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
@@ -90,7 +96,7 @@ class _EveningPageState extends State<EveningPage> {
     );
     if (time == null || !mounted) return;
     setState(() {
-      _sleepTime = formatTime24h(time);
+      _riseTime = formatTime24h(time);
       _updateSleepActivityTime();
     });
   }
@@ -99,7 +105,7 @@ class _EveningPageState extends State<EveningPage> {
   void _updateSleepActivityTime() {
     for (final activity in _activities) {
       if (activity.name == _sleepActivityName) {
-        activity.time = _sleepTime;
+        activity.time = _riseTime;
         return;
       }
     }
@@ -108,7 +114,8 @@ class _EveningPageState extends State<EveningPage> {
   Future<void> _saveRoutine() async {
     setState(() => _isSaving = true);
     try {
-      await widget.activitiesStorage.saveRoutineSleepTime(_sleepTime);
+      await widget.activitiesStorage.saveRoutineSleepTime(_riseTime);
+      await widget.activitiesStorage.saveActivities(_activities);
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Routine opgeslagen.')));
@@ -132,7 +139,7 @@ class _EveningPageState extends State<EveningPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: context.palette.background,
-      builder: (_) => ActivitySheet(activity: activity, sleepTime: _sleepTime),
+      builder: (_) => ActivitySheet(activity: activity, sleepTime: _riseTime),
     );
   }
 
@@ -163,21 +170,17 @@ class _EveningPageState extends State<EveningPage> {
       body: SafeArea(
         child: Column(
           children: [
+            const RfmAppBar(title: 'Ochtend'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(23, 17, 23, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _TopBar(),
-                    const SizedBox(height: 19),
-                    SleepTimeCard(
-                      sleepTime: _sleepTime,
-                      onEdit: _chooseSleepTime,
-                    ),
+                    RiseTimeCard(riseTime: _riseTime, onEdit: _chooseRiseTime),
                     const SizedBox(height: 21),
                     Text(
-                      'JOUW AVOND',
+                      'JOUW OCHTEND',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: context.palette.muted,
                         fontSize: 9,
@@ -223,38 +226,7 @@ class _EveningPageState extends State<EveningPage> {
   }
 }
 
-/// Back arrow and the page title.
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Row(
-      children: [
-        IconButton(
-          icon: Icon(Icons.arrow_back, size: 19, color: palette.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        const SizedBox(width: 25),
-        Text(
-          'Avond',
-          style: TextStyle(
-            color: palette.muted,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const Spacer(),
-        // Placeholder: the menu has no actions yet.
-        Icon(Icons.more_vert, size: 21, color: palette.text),
-      ],
-    );
-  }
-}
-
 /// "+ Activiteit toevoegen" button.
-
 class _OutlinedAction extends StatelessWidget {
   const _OutlinedAction({required this.label, required this.onPressed});
 

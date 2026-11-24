@@ -18,7 +18,9 @@ import 'screens/onboarding/questions_screen.dart';
 import 'screens/onboarding/tutorial_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile/profile_screen.dart';
-import 'screens/routines/routine_editor.dart';
+import 'screens/progress/routine_history_screen.dart';
+import 'screens/routines/routine_editor_evening.dart';
+import 'screens/routines/routine_editor_morning.dart';
 import 'screens/routines/routine_screen.dart';
 import 'screens/settings/placeholder_screen.dart';
 import 'screens/settings/routine_settings_screen.dart';
@@ -139,18 +141,26 @@ final GoRouter router = GoRouter(
 
     // ----- Routines -----
     GoRoute(
-      path: '/routine/morning',
-      builder: (context, state) =>
-          const RoutineScreen(initialPeriod: RoutinePeriod.morning),
+      path: '/routine',
+      builder: (context, state) {
+        final evening = state.uri.queryParameters['period'] == 'evening';
+        return RoutineScreen(
+          period: evening ? RoutinePeriod.evening : RoutinePeriod.morning,
+          openActiveStep: state.uri.queryParameters['open'] == 'active',
+        );
+      },
     ),
     GoRoute(
       path: '/routine/evening',
-      builder: (context, state) =>
-          const RoutineScreen(initialPeriod: RoutinePeriod.evening),
+      redirect: (_, _) => '/routine?period=evening',
     ),
     GoRoute(
       path: '/settings/routines',
       builder: (context, state) => const RoutineSettingsScreen(),
+    ),
+    GoRoute(
+      path: '/settings/routines/morning',
+      builder: (context, state) => const MorningPage(),
     ),
     GoRoute(
       path: '/settings/routines/evening',
@@ -178,8 +188,7 @@ final GoRouter router = GoRouter(
           routes: [
             GoRoute(
               path: '/progress',
-              builder: (context, state) =>
-                  const PlaceholderScreen(title: 'Progress'),
+              builder: (context, state) => const RoutineHistoryScreen(),
             ),
           ],
         ),

@@ -17,6 +17,7 @@ class HomeCarousel extends StatefulWidget {
   final List<HomeCard> cards;
 
   /// Which card is shown first (e.g. the evening card in the evening).
+  /// Changing it later slides the carousel to that card.
   final int initialIndex;
 
   final double height;
@@ -35,6 +36,17 @@ class _HomeCarouselState extends State<HomeCarousel> {
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// Home stays alive in the background: when the starting card changes
+  /// (a routine started or ended), slide to it.
+  @override
+  void didUpdateWidget(covariant HomeCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialIndex != widget.initialIndex &&
+        _controller.hasClients) {
+      _goTo(widget.initialIndex);
+    }
   }
 
   void _goTo(int i) => _controller.animateToPage(

@@ -3,12 +3,13 @@ import 'dart:math';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:live_activity_kit/live_activity_kit.dart';
 
-import '../../theme/app_colors.dart';
 import '../../theme/app_palette.dart';
 import 'focus_notification_navigation.dart';
+import 'session_store.dart';
 
 /// Alarm at the end of a session and the ongoing countdown in the
 /// notification shade (Android) or Live Activity (iOS).
@@ -22,13 +23,31 @@ class TimerNotificationService {
   static const _activityId = 'focus-timer';
   static const _alarmId = 1;
   static const _breakAlarmId = 2;
-  static const _countdownNotificationId = 100;
+
+  /// Our own Android countdown notification with a big timer (MainActivity.kt).
+  static const _androidCountdown = MethodChannel(
+    'rest_for_more/countdown_notification',
+  );
+
+  static const _routineStepAlarmId = 3;
+  static const _routineEndAlarmId = 4;
+
+  // Our own sounds (assets/sounds/), instead of the phone's alarm sound.
+  static const _sessionEndSound = 'assets/sounds/session_end.mp3';
+  static const _chimeSound = 'assets/sounds/session_end.mp3';
 
   final _notifications = FlutterLocalNotificationsPlugin();
 
   /// Call once in main().
   Future<void> init() async {
     try {
+      // Taps on our Android countdown notification.
+      _androidCountdown.setMethodCallHandler((call) async {
+        final link = call.arguments;
+        if (call.method == 'tapped' && link is String) {
+          FocusNotificationNavigation.reportTap(link);
+        }
+      });
       await Alarm.init();
       await _notifications.initialize(
         const InitializationSettings(
@@ -42,6 +61,20 @@ class TimerNotificationService {
       );
     } catch (error) {
       debugPrint('Notification setup failed: $error');
+    }
+  }
+
+  /// Android: if the app was started by tapping the countdown notification,
+  /// opens what it shows (the timer or the routine). Call once the app runs.
+  Future<void> reportLaunchTap() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final link = await _androidCountdown.invokeMethod<String>(
+        'takeLaunchLink',
+      );
+      if (link != null) FocusNotificationNavigation.reportTap(link);
+    } catch (error) {
+      debugPrint('Reading the notification tap failed: $error');
     }
   }
 
@@ -127,6 +160,99 @@ class TimerNotificationService {
     await _removeCountdown();
   }
 
+  // ---------- routines ----------
+
+  /// [showTimer] false: just the text, no countdown (Android). It still
+  /// disappears at [until].
+  Future<void> showRoutine({
+    required DateTime until,
+    required String title,
+    required String subtitle,
+    bool showTimer = true,
+  }) => _showCountdown(
+    until: until,
+    title: title,
+    subtitle: subtitle,
+    link: FocusNotificationNavigation.routineLink,
+    showTimer: showTimer,
+  );
+
+  /// Quiet single sound when a routine step's time is up.
+  Future<void> scheduleRoutineStepEnd(DateTime at, String stepTitle) =>
+      _setQuietAlarm(
+        id: _routineStepAlarmId,
+        at: at,
+        title: "Time's up",
+        body: '$stepTitle: tap Complete when you\'re ready.',
+        volume: 0.6,
+      );
+
+  /// When the routine's blocking ends. Opening the app unblocks the apps
+  /// if it was closed.
+  Future<void> scheduleRoutineUnblock(DateTime at, String routineTitle) =>
+      _setQuietAlarm(
+        id: _routineEndAlarmId,
+        at: at,
+        title: '$routineTitle finished',
+        body: 'Open Rest For More to unblock your apps.',
+        volume: 0.3,
+      );
+
+  Future<void> cancelRoutineStepEnd() => _stopAlarmById(_routineStepAlarmId);
+
+  /// Stops the routine's sounds and removes its countdown.
+  Future<void> cancelRoutine() async {
+    await _stopAlarmById(_routineStepAlarmId);
+    await _stopAlarmById(_routineEndAlarmId);
+    await _removeCountdown();
+  }
+
+  Future<void> _setQuietAlarm({
+    required int id,
+    required DateTime at,
+    required String title,
+    required String body,
+    required double volume,
+  }) async {
+    if (!at.isAfter(DateTime.now())) return;
+    try {
+      await Alarm.stop(id);
+      await Alarm.set(
+        alarmSettings: AlarmSettings(
+          id: id,
+          dateTime: at,
+          assetAudioPath: _chimeSound,
+          loopAudio: false,
+          vibrate: true,
+          androidAlarmClock: true,
+          androidFullScreenIntent: false,
+          androidStopAlarmOnTermination: false,
+          warningNotificationOnKill: false,
+          notificationSettings: NotificationSettings(
+            title: title,
+            body: body,
+            stopButton: 'OK',
+            keepNotificationAfterAlarmEnds: false,
+          ),
+          volumeSettings: VolumeSettings.fixed(
+            volume: volume,
+            volumeEnforced: false,
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint('Unable to schedule routine alarm: $error');
+    }
+  }
+
+  Future<void> _stopAlarmById(int id) async {
+    try {
+      await Alarm.stop(id);
+    } catch (error) {
+      debugPrint('Unable to stop routine alarm: $error');
+    }
+  }
+
   /// True while the end-of-session alarm is ringing.
   Future<bool> isRinging() async {
     try {
@@ -136,7 +262,21 @@ class TimerNotificationService {
     }
   }
 
-  /// Loud, looping alarm with a full-screen notification when the session ends.
+  /// The app was opened: if the focus session is over, stop its alarm in
+  /// case it's still ringing. A running session's alarm stays scheduled,
+  /// and a routine's notification is left alone.
+  Future<void> stopFocusAlarmIfOver() async {
+    try {
+      if (await SessionStore().isActive()) return;
+    } catch (_) {
+      // Can't tell: stop anyway, a ringing alarm is worse.
+    }
+    await _stopAlarm();
+    await _stopBreakAlarm();
+  }
+
+  /// Loud, looping alarm when the session ends. Stopped from its
+  /// notification, or by opening the app (see main.dart).
   Future<void> _scheduleAlarm(DateTime endAt, String profileName) async {
     if (!endAt.isAfter(DateTime.now())) return;
     try {
@@ -145,10 +285,12 @@ class TimerNotificationService {
         alarmSettings: AlarmSettings(
           id: _alarmId,
           dateTime: endAt,
+          assetAudioPath: _sessionEndSound,
           loopAudio: true,
           vibrate: true,
           androidAlarmClock: true,
-          androidFullScreenIntent: true,
+          // Don't open the app by itself: opening it stops the alarm.
+          androidFullScreenIntent: false,
           androidStopAlarmOnTermination: false,
           warningNotificationOnKill: true,
           notificationSettings: NotificationSettings(
@@ -157,9 +299,8 @@ class TimerNotificationService {
             stopButton: 'Stop',
             keepNotificationAfterAlarmEnds: false,
           ),
-          volumeSettings: VolumeSettings.fade(
+          volumeSettings: VolumeSettings.fixed(
             volume: 1.0,
-            fadeDuration: Duration.zero,
             volumeEnforced: false,
           ),
         ),
@@ -190,6 +331,7 @@ class TimerNotificationService {
         alarmSettings: AlarmSettings(
           id: _breakAlarmId,
           dateTime: breakEnd,
+          assetAudioPath: _chimeSound,
           loopAudio: false,
           vibrate: true,
           androidAlarmClock: true,
@@ -202,9 +344,8 @@ class TimerNotificationService {
             stopButton: 'OK',
             keepNotificationAfterAlarmEnds: false,
           ),
-          volumeSettings: VolumeSettings.fade(
+          volumeSettings: VolumeSettings.fixed(
             volume: 0.6,
-            fadeDuration: Duration.zero,
             volumeEnforced: false,
           ),
         ),
@@ -231,12 +372,16 @@ class TimerNotificationService {
     required DateTime until,
     required String title,
     required String subtitle,
+    String link = FocusNotificationNavigation.timerLink,
+    bool showTimer = true,
   }) async {
     if (defaultTargetPlatform == TargetPlatform.android) {
       await _showAndroidCountdown(
         until: until,
         title: title,
         subtitle: subtitle,
+        link: link,
+        showTimer: showTimer,
       );
       return;
     }
@@ -247,7 +392,7 @@ class TimerNotificationService {
       await _removeCountdown(); // replaces the old text
       await LiveActivity.show(
         id: _activityId,
-        deepLink: FocusNotificationNavigation.timerLink,
+        deepLink: link,
         theme: LATheme(
           background: dark.background,
           foreground: dark.text,
@@ -305,44 +450,25 @@ class TimerNotificationService {
     }
   }
 
-  /// Android: a standard ongoing notification with the system countdown
-  /// (chronometer) in its top line. The system draws it, so it follows the
-  /// phone's light/dark mode and fits both the collapsed and the expanded
-  /// notification. It removes itself 1 s after the end; the alarm takes over.
+  /// Android: our own notification layout (MainActivity.kt) with a big
+  /// system countdown: next to the text when collapsed, under it when
+  /// expanded. System text styles, so it follows light/dark mode. It
+  /// removes itself 1 s after the end; the alarm takes over.
   Future<void> _showAndroidCountdown({
     required DateTime until,
     required String title,
     required String subtitle,
+    required String link,
+    bool showTimer = true,
   }) async {
-    final remaining = until.difference(DateTime.now()).inMilliseconds;
     try {
-      await _notifications.show(
-        _countdownNotificationId,
-        title,
-        subtitle,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'focus_countdown',
-            'Focus countdown',
-            channelDescription:
-                'Shows the time left in a focus session or break.',
-            importance: Importance.low,
-            priority: Priority.low,
-            ongoing: true,
-            autoCancel: false,
-            onlyAlertOnce: true,
-            silent: true,
-            showWhen: true,
-            when: until.millisecondsSinceEpoch,
-            usesChronometer: true,
-            chronometerCountDown: true,
-            timeoutAfter: max(1000, remaining + 1000),
-            color: AppColors.lightBrown,
-            visibility: NotificationVisibility.public,
-          ),
-        ),
-        payload: FocusNotificationNavigation.timerLink,
-      );
+      await _androidCountdown.invokeMethod<void>('show', {
+        'title': title,
+        'subtitle': subtitle,
+        'endAtMillis': until.millisecondsSinceEpoch,
+        'showTimer': showTimer,
+        'link': link,
+      });
     } catch (error) {
       debugPrint('Unable to show focus notification: $error');
     }
@@ -352,7 +478,7 @@ class TimerNotificationService {
   Future<void> _removeCountdown() async {
     if (defaultTargetPlatform == TargetPlatform.android) {
       try {
-        await _notifications.cancel(_countdownNotificationId);
+        await _androidCountdown.invokeMethod<void>('cancel');
       } catch (error) {
         debugPrint('Unable to remove focus notification: $error');
       }
