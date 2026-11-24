@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'l10n/app_localizations.dart';
@@ -15,10 +17,9 @@ import 'theme/app_theme.dart';
 
 /// App entry point.
 ///
-/// Loads everything the first screen needs before `runApp`: the saved
-/// language and theme, the notification channel, the default focus
-/// profiles and the welcome choice. Clerk sign-in starts in the
-/// background and is not awaited, so the app also opens offline.
+/// Loads the saved UI preferences before `runApp`. Platform-plugin setup is
+/// deliberately deferred so a slow or unavailable native service cannot hold
+/// the Android launch screen forever.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -31,18 +32,21 @@ Future<void> main() async {
 
   await LocaleController.instance.initialize();
   await ThemeController.instance.initialize();
+  await WelcomeChoiceStore.instance.load();
 
+  runApp(const MyApp());
+  unawaited(_initializePlatformServices());
+}
+
+/// Native services are useful but must never block the first frame.
+Future<void> _initializePlatformServices() async {
   AuthService.instance.start();
-
   await TimerNotificationService.instance.init();
   // Opening the app stops a ringing end-of-session alarm.
   await TimerNotificationService.instance.stopFocusAlarmIfOver();
   await ensureCoreProfiles();
   // Continue a running routine, or unblock if its time is over.
   await RoutineSessionController.instance.restore();
-  await WelcomeChoiceStore.instance.load();
-
-  runApp(const MyApp());
 }
 
 /// Root widget.

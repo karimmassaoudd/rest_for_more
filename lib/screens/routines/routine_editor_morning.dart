@@ -8,6 +8,7 @@ import '../../services/routines/save_activities.dart';
 
 import '../../theme/app_palette.dart';
 
+import '../../widgets/common/rfm_app_bar.dart';
 import '../../widgets/routines/activity_sheet.dart';
 import '../../widgets/routines/activity_tile.dart';
 import '../../widgets/routines/rise_time_card.dart';
@@ -16,8 +17,8 @@ import '../../widgets/routines/rise_time_card.dart';
 /// and is always shown last. Must match default_evening_activities.dart.
 const _sleepActivityName = 'Slapen';
 
-/// Editor for the evening routine (Settings → Edit routines):
-/// set the bedtime, and add, edit or delete evening activities.
+/// Editor for the morning routine (Settings → Edit routines):
+/// set the wake-up time, and add, edit or delete morning activities.
 ///
 /// Bedtime and activity changes are persisted when the user saves.
 class MorningPage extends StatefulWidget {
@@ -36,7 +37,8 @@ class MorningPage extends StatefulWidget {
 
 class _MorningPageState extends State<MorningPage> {
   late List<Activity> _activities;
-  String _riseTime = defaultRoutineSleepTime; //this time comes from the savefile/database
+  String _riseTime =
+      defaultRoutineSleepTime; //this time comes from the savefile/database
   bool _isSaving = false;
 
   @override
@@ -168,18 +170,14 @@ class _MorningPageState extends State<MorningPage> {
       body: SafeArea(
         child: Column(
           children: [
+            const RfmAppBar(title: 'Ochtend'),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(23, 17, 23, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const _TopBar(),
-                    const SizedBox(height: 19),
-                    RiseTimeCard(
-                      riseTime: _riseTime,
-                      onEdit: _chooseRiseTime,
-                    ),
+                    RiseTimeCard(riseTime: _riseTime, onEdit: _chooseRiseTime),
                     const SizedBox(height: 21),
                     Text(
                       'JOUW OCHTEND',
@@ -228,35 +226,7 @@ class _MorningPageState extends State<MorningPage> {
   }
 }
 
-/// Back arrow and the page title.
-class _TopBar extends StatelessWidget {
-  const _TopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.palette;
-    return Row(
-      children: [
-        IconButton(
-          icon: Icon(Icons.arrow_back, size: 19, color: palette.text),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        const SizedBox(width: 25),
-        Text(
-          'Ochtend',
-          style: TextStyle(
-            color: palette.muted,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// "+ Activiteit toevoegen" button.
-
 class _OutlinedAction extends StatelessWidget {
   const _OutlinedAction({required this.label, required this.onPressed});
 

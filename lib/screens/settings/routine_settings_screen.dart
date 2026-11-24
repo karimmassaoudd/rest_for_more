@@ -6,9 +6,8 @@ import '../../widgets/common/rfm_app_bar.dart';
 /// The routines, opened from Settings → Edit routines; works like
 /// Focus profiles.
 ///
-/// Morning opens the morning routine, where steps are added and its
-/// settings changed; Evening opens the evening editor (bedtime and
-/// activities).
+/// Morning opens the morning editor (wake-up time and activities);
+/// Evening opens the evening editor (bedtime and activities).
 class RoutineSettingsScreen extends StatelessWidget {
   const RoutineSettingsScreen({super.key});
 
@@ -23,7 +22,7 @@ class RoutineSettingsScreen extends StatelessWidget {
             icon: Icons.wb_twilight_rounded,
             title: 'Morning routine',
             subtitle: 'Steps to start your day',
-            onTap: () => context.push('/routine/morning'),
+            onTap: () => context.push('/settings/routines/morning'),
           ),
           _RoutineTile(
             icon: Icons.nights_stay_rounded,
