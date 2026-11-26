@@ -98,6 +98,66 @@ class AuthFlow {
     await auth.resendCode(clerk.Strategy.emailCode);
   }
 
+  /// "Forgot password?": Clerk emails a 6-digit reset code.
+  ///
+  /// Starts a new sign-in with the reset strategy. Also used for
+  /// "Resend code" on the reset screen: calling it again sends a new code.
+  /// An unknown email throws a ClerkError (form_identifier_not_found).
+  Future<void> startPasswordReset(String email) async {
+    final auth = await _auth();
+    await auth.initiatePasswordReset(
+      identifier: email,
+      strategy: clerk.Strategy.resetPasswordEmailCode,
+    );
+
+    // Clerk now waits for the code. Anything else means no code was sent.
+    if (auth.signIn?.status != clerk.Status.needsFirstFactor) {
+      debugPrint('Reset not started. Status: ${auth.signIn?.status}');
+      throw AuthIncomplete('reset not started: ${auth.signIn?.status}');
+    }
+  }
+
+  /// Checks the reset code and sets [newPassword]. Clerk then signs the
+  /// user in.
+  ///
+  /// [email] is only used when no reset is in progress anymore (e.g. the
+  /// app was restarted); otherwise Clerk reuses the sign-in from
+  /// [startPasswordReset]. Passing it every time could start a new
+  /// sign-in, which makes the emailed code invalid.
+  Future<AuthNext> resetPassword(
+    String email,
+    String code,
+    String newPassword,
+  ) async {
+    // attemptSignIn only resets with a full 6-digit code; with anything
+    // else it would quietly send a new code instead.
+    if (code.length != 6) {
+      throw const AuthIncomplete(AuthIncomplete.codeNotAccepted);
+    }
+
+    final auth = await _auth();
+    await auth.attemptSignIn(
+      strategy: clerk.Strategy.resetPasswordEmailCode,
+      identifier: auth.signIn == null ? email : null,
+      code: code,
+      password: newPassword,
+    );
+
+    if (auth.isSignedIn) return AuthNext.signedIn;
+
+    // Password is changed, but Clerk wants an extra check (new device or
+    // 2FA), like on log-in: email a code for "Check your email".
+    final status = auth.signIn?.status;
+    if (status == clerk.Status.needsSecondFactor ||
+        status == clerk.Status.needsClientTrust) {
+      await auth.attemptSignIn(strategy: clerk.Strategy.emailCode);
+      return AuthNext.verifyEmail;
+    }
+
+    // Still waiting for the first factor: the code wasn't accepted.
+    throw const AuthIncomplete(AuthIncomplete.codeNotAccepted);
+  }
+
   /// Logs in with email and password.
   Future<AuthNext> logIn({
     required String email,

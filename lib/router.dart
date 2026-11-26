@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 
 import 'models/routines/routine_step.dart';
 import 'screens/auth/create_account_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/auth/log_in_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 import 'screens/auth/verify_email_screen.dart';
 import 'screens/focus/countdown_timer_screen.dart';
 import 'screens/focus/custom_time_screen.dart';
@@ -36,6 +38,8 @@ const _onboardingPaths = {
   '/sign-up',
   '/verify',
   '/log-in',
+  '/forgot-password',
+  '/reset-password',
   '/onboarding/questions',
   '/onboarding/tutorial',
   '/onboarding/cloud',
@@ -83,6 +87,19 @@ final GoRouter router = GoRouter(
           VerifyEmailScreen(args: state.extra as VerifyArgs),
     ),
     GoRoute(path: '/log-in', builder: (context, state) => const LogInScreen()),
+    GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) => ForgotPasswordScreen(
+        initialEmail: state.extra is String ? state.extra as String : '',
+      ),
+    ),
+    GoRoute(
+      path: '/reset-password',
+      redirect: (context, state) =>
+          state.extra is String ? null : '/forgot-password',
+      builder: (context, state) =>
+          ResetPasswordScreen(email: state.extra as String),
+    ),
     GoRoute(
       path: '/onboarding/questions',
       builder: (context, state) => const QuestionsScreen(),

@@ -92,21 +92,15 @@ class _LogInScreenState extends State<LogInScreen> {
     }
   }
 
-  /// Placeholder until password reset is built.
-  void _forgotPassword() {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('Password reset is coming soon.')),
-      );
-  }
+  /// Opens "Reset password" with the email typed so far.
+  void _forgotPassword() =>
+      context.push('/forgot-password', extra: _email.text.trim());
 
   @override
   Widget build(BuildContext context) {
     return AutofillGroup(
       child: AuthScaffold(
         title: 'Log in',
-        titleCentered: true,
         subtitle: const Text('Welcome back. Your calm routines are waiting.'),
         primaryLabel: 'Log in',
         onPrimary: _logIn,

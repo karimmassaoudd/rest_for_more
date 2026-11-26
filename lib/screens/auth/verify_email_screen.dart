@@ -184,11 +184,11 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         ),
         if (_codeError != null) ...[
           const SizedBox(height: 10),
-          AuthErrorText(_codeError!, center: true),
+          AuthErrorText(_codeError!),
         ],
         if (_generalError != null) ...[
           const SizedBox(height: 10),
-          AuthErrorText(_generalError!, center: true),
+          AuthErrorText(_generalError!),
         ],
       ],
     );

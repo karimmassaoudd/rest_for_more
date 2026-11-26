@@ -7,8 +7,8 @@ import '../../theme/app_palette.dart';
 // Re-exported so screens that import this file also get CodeInput.
 export 'code_input.dart';
 
-// Shared building blocks for the account screens:
-// create account, log in and verify email.
+// Shared building blocks for the account screens: create account,
+// log in, verify email, reset password and new password.
 
 /// Page layout: back button + Cormorant title, optional subtitle,
 /// scrollable form, one primary button at the bottom, small footer link.
@@ -22,7 +22,7 @@ class AuthScaffold extends StatelessWidget {
     required this.onPrimary,
     this.loading = false,
     this.footer,
-    this.titleCentered = false,
+    this.titleCentered = true,
     this.trailing,
   });
 
@@ -41,6 +41,8 @@ class AuthScaffold extends StatelessWidget {
 
   /// Shown under the primary button, e.g. [AuthFooterLink].
   final Widget? footer;
+
+  /// Centred by default, like all account screens.
   final bool titleCentered;
 
   /// Optional widget at the right of the title row (e.g. a language toggle).
@@ -283,12 +285,11 @@ class _AuthTextFieldState extends State<AuthTextField> {
   }
 }
 
-/// Small red message under a field or the code boxes.
+/// Small red message under a field or the code boxes. Always left-aligned.
 class AuthErrorText extends StatelessWidget {
-  const AuthErrorText(this.message, {super.key, this.center = false});
+  const AuthErrorText(this.message, {super.key});
 
   final String message;
-  final bool center;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +297,7 @@ class AuthErrorText extends StatelessWidget {
       liveRegion: true, // screen readers announce the error
       child: Text(
         message,
-        textAlign: center ? TextAlign.center : TextAlign.start,
+        textAlign: TextAlign.start,
         style: AppFonts.manrope(size: 12, color: AppColors.error),
       ),
     );

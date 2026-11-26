@@ -95,3 +95,11 @@ bool _looksOffline(Object error) {
       text.contains('ClientException') ||
       text.contains('Connection refused');
 }
+
+/// True when Clerk has no account for this email.
+/// The log-in screen hides this on purpose; the reset screen shows it.
+bool isUnknownAccount(Object error) =>
+    error is clerk.ClerkError &&
+    (error.errors?.errors ?? []).any(
+      (e) => e.code == 'form_identifier_not_found',
+    );
