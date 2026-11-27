@@ -12,3 +12,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+# Shared debug key, so Google sign-in works on every team member's build.
+# Not secret (password "android"); never use it for a Play Store release.
+!app/debug.keystore
