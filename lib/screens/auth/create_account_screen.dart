@@ -102,6 +102,27 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
   }
 
+  /// "Continue with Google": signs in, or creates the account if this
+  /// Google account is new. Closing the picker does nothing.
+  Future<void> _continueWithGoogle() async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _generalError = null;
+    });
+    try {
+      final next = await AuthFlow.instance.signInWithGoogle();
+      if (!mounted || next == null) return;
+      await WelcomeChoiceStore.instance.markChosen();
+      if (mounted) context.go('/');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _generalError = describeAuthError(error).message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AutofillGroup(
@@ -113,6 +134,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         primaryLabel: 'Sign up',
         onPrimary: _signUp,
         loading: _loading,
+        secondary: AuthFlow.instance.googleAvailable
+            ? AuthGoogleButton(onPressed: _loading ? null : _continueWithGoogle)
+            : null,
         footer: AuthFooterLink(
           text: 'Already have an account?',
           linkText: 'Log in',

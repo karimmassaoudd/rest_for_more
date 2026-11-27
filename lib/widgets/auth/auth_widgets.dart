@@ -11,7 +11,8 @@ export 'code_input.dart';
 // log in, verify email, reset password and new password.
 
 /// Page layout: back button + Cormorant title, optional subtitle,
-/// scrollable form, one primary button at the bottom, small footer link.
+/// scrollable form, optional second button, one primary button at the
+/// bottom, small footer link.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     super.key,
@@ -22,6 +23,7 @@ class AuthScaffold extends StatelessWidget {
     required this.onPrimary,
     this.loading = false,
     this.footer,
+    this.secondary,
     this.titleCentered = true,
     this.trailing,
   });
@@ -41,6 +43,10 @@ class AuthScaffold extends StatelessWidget {
 
   /// Shown under the primary button, e.g. [AuthFooterLink].
   final Widget? footer;
+
+  /// Optional second button right above the primary one,
+  /// e.g. [AuthGoogleButton].
+  final Widget? secondary;
 
   /// Centred by default, like all account screens.
   final bool titleCentered;
@@ -101,6 +107,12 @@ class AuthScaffold extends StatelessWidget {
                   ),
                 ),
               ),
+              if (secondary != null) ...[
+                secondary!,
+                const SizedBox(height: 12),
+                const AuthOrDivider(),
+                const SizedBox(height: 12),
+              ],
               AuthPrimaryButton(
                 label: primaryLabel,
                 onPressed: onPrimary,
@@ -177,6 +189,65 @@ class AuthPrimaryButton extends StatelessWidget {
               )
             : Text(label),
       ),
+    );
+  }
+}
+
+/// "Continue with Google": outlined, same size as the primary button,
+/// with Google's official "G" on the left (assets/images/google_g.png).
+/// Used for both log-in and sign-up: Clerk creates the account if needed.
+class AuthGoogleButton extends StatelessWidget {
+  const AuthGoogleButton({super.key, required this.onPressed});
+
+  /// Null disables the button (e.g. while loading).
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.text,
+          side: BorderSide(color: palette.border),
+          textStyle: AppFonts.manrope(size: 15, weight: FontWeight.w600),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/images/google_g.png', width: 26, height: 26),
+            const SizedBox(width: 12),
+            const Text('Continue with Google'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Thin line, "or", thin line: between two alternative buttons,
+/// e.g. "Continue with Google" and "Log in".
+class AuthOrDivider extends StatelessWidget {
+  const AuthOrDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Row(
+      children: [
+        Expanded(child: Divider(height: 1, color: palette.border)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'or',
+            style: AppFonts.manrope(size: 12, color: palette.muted),
+          ),
+        ),
+        Expanded(child: Divider(height: 1, color: palette.border)),
+      ],
     );
   }
 }

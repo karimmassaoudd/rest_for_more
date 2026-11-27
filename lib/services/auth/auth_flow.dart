@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:clerk_auth/clerk_auth.dart' as clerk;
 import 'package:clerk_flutter/clerk_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_service.dart';
 
@@ -47,16 +51,20 @@ class AuthFlow {
       AuthService.instance.state.timeout(const Duration(seconds: 15));
 
   /// Creates the account; Clerk then emails a 6-digit code.
-  /// [name] is stored as the Clerk first name.
+  /// [name] is split into Clerk first and last name.
   Future<AuthNext> signUp({
     required String name,
     required String email,
     required String password,
   }) async {
     final auth = await _auth();
+    // Split the name into first and last name, like Google does,
+    // so a Google sign-in later doesn't add the last name a second time.
+    final parts = name.trim().split(RegExp(r'\s+'));
     await auth.attemptSignUp(
       strategy: clerk.Strategy.emailCode,
-      firstName: name,
+      firstName: parts.first,
+      lastName: parts.length > 1 ? parts.sublist(1).join(' ') : null,
       emailAddress: email,
       password: password,
       passwordConfirmation: password,
@@ -158,6 +166,61 @@ class AuthFlow {
     throw const AuthIncomplete(AuthIncomplete.codeNotAccepted);
   }
 
+  /// Google sign-in is only set up for Android so far (iOS needs an
+  /// Apple developer account first). Screens hide the button otherwise.
+  bool get googleAvailable =>
+      defaultTargetPlatform == TargetPlatform.android &&
+      googleServerClientId.isNotEmpty;
+
+  /// Prepares Google sign-in with a fresh nonce before every sign-in.
+  /// Clerk only accepts Google ID tokens from Android that carry a nonce
+  /// (a random one-time value), and each nonce only once. On Android,
+  /// initialize() just stores these values, so calling it again is safe.
+  Future<void> _initGoogle() async {
+    await GoogleSignIn.instance.initialize(
+      serverClientId: googleServerClientId,
+      nonce: _randomNonce(),
+    );
+  }
+
+  /// 32 random bytes, URL-safe, without padding.
+  String _randomNonce() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64Url.encode(bytes).replaceAll('=', '');
+  }
+
+  /// "Continue with Google": Google's account picker, then Clerk signs the
+  /// user in, or creates the account if this Google account is new.
+  /// Returns null when the user closes the picker.
+  Future<AuthNext?> signInWithGoogle() async {
+    // Already signed in (e.g. a session restored after a restart):
+    // nothing to do, the screen just goes Home.
+    final auth = await _auth();
+    if (auth.isSignedIn) return AuthNext.signedIn;
+
+    await _initGoogle();
+
+    String? idToken;
+    try {
+      final account = await GoogleSignIn.instance.authenticate();
+      idToken = account.authentication.idToken;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      rethrow;
+    }
+    if (idToken == null) throw const AuthIncomplete('no Google ID token');
+
+    await auth.idTokenSignIn(
+      provider: clerk.IdTokenProvider.google,
+      token: idToken,
+    );
+
+    if (auth.isSignedIn) return AuthNext.signedIn;
+    debugPrint('Google sign-in incomplete: ${auth.signUp?.missingFields}');
+    throw AuthIncomplete('google: missing ${auth.signUp?.missingFields}');
+  }
+
   /// Logs in with email and password.
   Future<AuthNext> logIn({
     required String email,
@@ -186,6 +249,13 @@ class AuthFlow {
   Future<void> signOut() async {
     final auth = await _auth();
     await auth.signOut();
+    if (googleAvailable) {
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (e) {
+        debugPrint('Google sign-out failed: $e');
+      }
+    }
   }
 
   /// Deletes the Clerk user.

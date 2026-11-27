@@ -92,6 +92,26 @@ class _LogInScreenState extends State<LogInScreen> {
     }
   }
 
+  /// "Continue with Google". Closing the picker does nothing.
+  Future<void> _continueWithGoogle() async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _generalError = null;
+    });
+    try {
+      final next = await AuthFlow.instance.signInWithGoogle();
+      if (!mounted || next == null) return;
+      await WelcomeChoiceStore.instance.markChosen();
+      if (mounted) context.go('/');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _generalError = describeAuthError(error).message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   /// Opens "Reset password" with the email typed so far.
   void _forgotPassword() =>
       context.push('/forgot-password', extra: _email.text.trim());
@@ -105,6 +125,9 @@ class _LogInScreenState extends State<LogInScreen> {
         primaryLabel: 'Log in',
         onPrimary: _logIn,
         loading: _loading,
+        secondary: AuthFlow.instance.googleAvailable
+            ? AuthGoogleButton(onPressed: _loading ? null : _continueWithGoogle)
+            : null,
         footer: AuthFooterLink(
           text: 'No account yet?',
           linkText: 'Create one',

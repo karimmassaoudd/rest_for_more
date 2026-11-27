@@ -6,6 +6,10 @@ import 'package:flutter/foundation.dart';
 /// Read from clerk.json: flutter run --dart-define-from-file=clerk.json
 const clerkPublishableKey = String.fromEnvironment('CLERK_PUBLISHABLE_KEY');
 
+/// Web client ID from Google Cloud (also in clerk.json). Google puts it in
+/// the ID token, so Clerk knows the token was made for this app.
+const googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+
 /// Starts Clerk in the background so the app never waits for the internet.
 ///
 /// Home, the timer and routines work without it; only the account screens
